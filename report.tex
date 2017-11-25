@@ -116,137 +116,183 @@ design. To explore the design process of such tools we present a Haskell formali
 \section{Introduction}
 
 The Subtractor instruction set architecture is designed to be a case study for
-the simulation and verification tools development. Thus, the ISA design is mainly driven by the dichotomy between tool's expressiveness and conciseness.
-We want the tools implementations to be concise in order to keep focus on the
-implementation details and escape the mental overhead of maintaining a large ISA. At the same time, the case study ISA must be sophisticated enough to
+the simulation and formal verification tools development. Thus, the ISA design is mainly driven by the dichotomy between tool's expressiveness and their implementation conciseness.
+We want the tools' implementations to be reasonable concise in order to keep focus on the
+implementation details and escape the mental overhead of maintaining a large code base. At the same time, the case study ISA must be sophisticated enough to
 yield interesting programs with non-trivial properties to be verified.
 
 The Subtractor ISA design was inspired by an extreme case of OISCs~--- one instruction set computers. OISCs have ISAs consisting from one instruction only and are beautiful in their simplicity. But the verification tool implemented for such a simple case would be too degenerate; thus we enriched the architecture with a limited set of additional instructions.
 
-In this report we present the Subtractor instruction set architecture and a Haskell framework for simulation, verification and synthesis of Subtractor programs. The framework includes an embedded assembly language and a framework to simulate the Subtracor operation and verify properties of the Subtractor programs.
+In this report we present the Subtractor instruction set architecture and a Haskell framework for simulation, formal verification and synthesis of Subtractor programs. The framework includes an embedded assembly language and a framework to simulate the Subtracor operation and verify properties of the Subtractor programs. As Subtractor architecture design is mainly driven by our Haskell implementation, we present all the involved concepts using their Haskell encoding. We believe that Haskell notation is clear enough and the chosen manner of presentation will enable us to focus on the formal verification framework implementation.
 
-\section{Subtractor architecture}
+\section{The Subtractor ISA and its Haskell implementation}
 
-Subtractor is designed to be simple but yet not trivial computer architecture. Since its main purpose is to be a case study for simulation and verification tools design, Substractors design is mainly driven by the dichotomy between tool's expressiveness and conciseness. We aim to explore the methods of development of verification tools thus we need a simple yet not trivial case study.
+Subtractor is designed to be simple but yet not trivial computer architecture. Since its main purpose is to be a case study for simulation and verification tools design, Substractors design is mainly driven by the dichotomy between tool's expressiveness and conciseness. We aim to explore the methods of development of formal verification tools thus we need a simple yet not trivial case study.
 
-It has 4 general purpose registers, 2 flags and 7 commands.
+The Subtractor ISA has 4 general purpose registers, 2 flags and 8 commands. It overates 64 bit words as data values and uses 8 bit words as memory addresses. Some instructions expect an 8-bit signed immediate argument.
 
-\section{Embedding Subtractor in Haskell}
+This section is structured as following: we first consider how the instructions syntax are represented, informally describe the intuitive meaning of each instruction; then we transfer to the model of machine state and execution, gradually building an interpreter for instructions in terms of transitions between Subtractor's states. We continue with the description of an embedded assembly language that enables us to build Subtractor programs reusing the Haskell's notation. The last subsection presents the examples of usage of the developed simulation and formal verification framework.
 
-\subsection{Basics}
+\subsection{Subtractor instructions}
 
-\subsection{Machine state}
+Let us first consider the data type representing the instructions:
 
-We represent the Subtractor machine state as a record type.
-
+% \begin{figure}
 \begin{minted}{haskell}
-data MachineState = MachineState
-    { registers           :: RegisterBank
-    , instructionCounter  :: InstructionAddress
-    , instructionRegister :: Instruction
-    , flags               :: Flags
-    , memory              :: Memory
-    , program             :: Program
-    , clock               :: Clock
-    }
-\end{minted}
-
-\subsection{Machine operation}
-
-\subsection{Assembly language syntax}
-
-\begin{minted}{haskell}
-data Instruction = Halt
-                 | Load     Register MemoryAddress
+data Instruction = Load     Register MemoryAddress
+                 | LoadMI   Register MemoryAddress
                  | Set      Register SImm8
                  | Store    Register MemoryAddress
                  | Subtract Register MemoryAddress
-                 | Jump     SImm10
-                 | JumpZero SImm10
-    deriving (Show, Eq)
+                 | Jump     SImm8
+                 | JumpZero SImm8
+                 | Halt
 \end{minted}
 
-We define the program as a value of type~\mintinline{haskell}{Script}. Since~\mintinline{haskell}{Script} is a monad, we can use Haskell's~\mintinline{haskell}{do}-notation to write the program code.
+Before getting to the description of each instruction, let us clarify the other data types involved. The current implementation of the formal verification framework is build on top of Haskell SBV (SMT Based Verification) library~\ref{SBV}. SBV performs symbolic execution of the Subtractor programs, provides a DSL for defining properties to be automatically checked by a SAT/SMT solver. The~\mintinline{haskell}{Register},~\mintinline{haskell}{MemoryAddress} and~\mintinline{haskell}{SImm8} types are internally represented as the symbolic words of appropriate length.
 
-\begin{minted}{haskell}
-type Script = Writer [Instruction] ()
-\end{minted}
+Having that in mind we now can informally describe the behaviour of every instruction. Later in this report we will implement an interpreter for Subtractor assembly language, thus defining an operational semantics for the syntax provided.
 
-\begin{minted}{haskell}
-load :: Register -> MemoryAddress -> Script
-load rX dmemaddr = tell [Load rX dmemaddr]
+Informally, Subtractor instructions have the following meaning:
 
-set :: Register -> SImm8 -> Script
-set rX simm = tell [Set rX simm]
+\begin{itemize}
+    \item[\mintinline{haskell}{Load r memaddr}] loads a value from a memory location~\mintinline{haskell}{memaddr} to a register~\mintinline{haskell}{r}.
 
-store :: Register -> MemoryAddress -> Script
-store rX dmemaddr = tell [Store rX dmemaddr]
+    \item[\mintinline{haskell}{LoadMI r memaddr}] loads a value from the memory location~\mintinline{haskell}{memaddr} to the register~\mintinline{haskell}{r} using indirect memory access mode, i.e. loading the value from~\mintinline{haskell}{memaddr} and using it as a memory address argument for the \mintinline{haskell}{Load} instruction.
 
-subtract :: Register -> MemoryAddress -> Script
-subtract rX dmemaddr = tell [Subtract rX dmemaddr]
+    \item[\mintinline{haskell}{Set r simm8}] loads the 8-bit immediate argument ~\mintinline{haskell}{simm8} to the register~\mintinline{haskell}{r}.
 
-jump :: SImm10 -> Script
-jump simm = tell [Jump simm]
+    \item[\mintinline{haskell}{Store r memaddr}] stores a value from the register~\mintinline{haskell}{r} to the memory location~\mintinline{haskell}{memaddr}.
 
-jumpZero :: SImm10 -> Script
-jumpZero simm = tell [JumpZero simm]
+    \item[\mintinline{haskell}{Subtract r memaddr}] subtracts a value placed in the memory location~\mintinline{haskell}{memaddr} from a value contained in the register~\mintinline{haskell}{r}.
 
-halt :: Script
-halt = tell [Halt]
-\end{minted}
+    \item[\mintinline{haskell}{Jump simm8}] performs an unconditional jump. Modifies the machine instruction counter (see section~\ref{State}) by~\mintinline{haskell}{simm8} offset.
 
-\subsection{Assembly language semantics}
+    \item[\mintinline{haskell}{JumpZero simm8}] performs a conditional jump if the~\mintinline{haskell}{Zero} (see section~\ref{Flags}) flag is set.
 
-The Subtractor program semantics is essentially a state transformer. Every instruction execution takes a current machine state, transforms it in a specified way and yields a modified state. Haskell provides a dedicated abstraction to encode this kind of behavior~--- a state monad~\cite{stateMonad}.
+    \item[\mintinline{haskell}{Halt}] stops the execution. Sets the~\mintinline{haskell}{Halt} flag (see section~\ref{Flags}).
+\end{itemize}
 
-\begin{minted}{haskell}
-newtype Machine a = Machine { runMachine :: State MachineState a }
-    deriving (Functor, Applicative, Monad, MonadState MachineState)
-\end{minted}
+\subsection{Subtractor state and instruction semantics}
 
-The instruction execution process is implemented as an monadic action parametrized by a value of the~\mintinline{haskell}{Instruction} data type. The~\mintinline{haskell}{execute} function is essentially an interpreter, assigning the semantics to every Subtractor instruction.
+Subtractor state and instruction semantics
 
-\begin{minted}{haskell}
-execute :: Instruction -> Machine ()
-execute (Halt                ) = writeFlag Halted true
-execute (Load     rX dmemaddr) = readMemory dmemaddr >>= writeRegister rX
-execute (Set      rX simm    ) = (writeRegister rX $ fromSImm8 simm)
-execute (Store    rX dmemaddr) = readRegister rX >>= writeMemory dmemaddr
-execute (Subtract rX dmemaddr) = do
-    x <- readRegister rX
-    y <- readMemory dmemaddr
-    let z = x - y
-    writeFlag Zero (z .== 0)
-    writeRegister rX z
-execute (Jump     simm          ) =
-    modify $ \currentState ->
-        currentState {instructionCounter =
-            instructionCounter currentState + fromSImm10 simm}
-execute (JumpZero simm          ) = do
-    zeroIsSet <- readFlag Zero
-    ic <- instructionCounter <$> get
-    let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
-    modify $ \currentState ->
-        currentState {instructionCounter = ic'}
-\end{minted}
+\subsection{Subtractor assembly language}
 
-\section{Simulation and verification back end}
+Subtractor assembly language
 
-The developed framework provides a work flow for writing Subtractor assembly programs, simulating their execution with concrete values and provides a prototype of program verification facilities by means of symbolical execution of Subtractor programs.
+\subsection{Simulating and formally verifying Subtractor programs}
 
-To get started, let us consider a simple program swapping two numbers located in memory.
+Simulating and formally verifying Subtractor programs
 
-\begin{minted}{haskell}
-swap :: Script
-swap = do
-    load r0 0
-    load r1 1
-    store r1 0
-    store r0 1
-    halt
-\end{minted}
+% \caption{Subtractor instructions}
+% \end{figure}
 
-The program consist from only 5 commands. The first two load the values from memory to two registers and the the second two stores them with locations swapped.
+% \section{Embedding Subtractor in Haskell}
+
+% \subsection{Basics}
+
+% \subsection{Machine state}
+
+% We represent the Subtractor machine state as a record type.
+
+% \begin{minted}{haskell}
+% data MachineState = MachineState
+%     { registers           :: RegisterBank
+%     , instructionCounter  :: InstructionAddress
+%     , instructionRegister :: Instruction
+%     , flags               :: Flags
+%     , memory              :: Memory
+%     , program             :: Program
+%     , clock               :: Clock
+%     }
+% \end{minted}
+
+% \subsection{Machine operation}
+
+% \subsection{Assembly language syntax}
+
+% We define the program as a value of type~\mintinline{haskell}{Script}. Since~\mintinline{haskell}{Script} is a monad, we can use Haskell's~\mintinline{haskell}{do}-notation to write the program code.
+
+% \begin{minted}{haskell}
+% type Script = Writer [Instruction] ()
+% \end{minted}
+
+% \begin{minted}{haskell}
+% load :: Register -> MemoryAddress -> Script
+% load rX dmemaddr = tell [Load rX dmemaddr]
+
+% set :: Register -> SImm8 -> Script
+% set rX simm = tell [Set rX simm]
+
+% store :: Register -> MemoryAddress -> Script
+% store rX dmemaddr = tell [Store rX dmemaddr]
+
+% subtract :: Register -> MemoryAddress -> Script
+% subtract rX dmemaddr = tell [Subtract rX dmemaddr]
+
+% jump :: SImm10 -> Script
+% jump simm = tell [Jump simm]
+
+% jumpZero :: SImm10 -> Script
+% jumpZero simm = tell [JumpZero simm]
+
+% halt :: Script
+% halt = tell [Halt]
+% \end{minted}
+
+% \subsection{Assembly language semantics}
+
+% The Subtractor program semantics is essentially a state transformer. Every instruction execution takes a current machine state, transforms it in a specified way and yields a modified state. Haskell provides a dedicated abstraction to encode this kind of behavior~--- a state monad~\cite{stateMonad}.
+
+% \begin{minted}{haskell}
+% newtype Machine a = Machine { runMachine :: State MachineState a }
+%     deriving (Functor, Applicative, Monad, MonadState MachineState)
+% \end{minted}
+
+% The instruction execution process is implemented as an monadic action parametrized by a value of the~\mintinline{haskell}{Instruction} data type. The~\mintinline{haskell}{execute} function is essentially an interpreter, assigning the semantics to every Subtractor instruction.
+
+% \begin{minted}{haskell}
+% execute :: Instruction -> Machine ()
+% execute (Halt                ) = writeFlag Halted true
+% execute (Load     rX dmemaddr) = readMemory dmemaddr >>= writeRegister rX
+% execute (Set      rX simm    ) = (writeRegister rX $ fromSImm8 simm)
+% execute (Store    rX dmemaddr) = readRegister rX >>= writeMemory dmemaddr
+% execute (Subtract rX dmemaddr) = do
+%     x <- readRegister rX
+%     y <- readMemory dmemaddr
+%     let z = x - y
+%     writeFlag Zero (z .== 0)
+%     writeRegister rX z
+% execute (Jump     simm          ) =
+%     modify $ \currentState ->
+%         currentState {instructionCounter =
+%             instructionCounter currentState + fromSImm10 simm}
+% execute (JumpZero simm          ) = do
+%     zeroIsSet <- readFlag Zero
+%     ic <- instructionCounter <$> get
+%     let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
+%     modify $ \currentState ->
+%         currentState {instructionCounter = ic'}
+% \end{minted}
+
+% \section{Simulation and verification back end}
+
+% The developed framework provides a work flow for writing Subtractor assembly programs, simulating their execution with concrete values and provides a prototype of program verification facilities by means of symbolical execution of Subtractor programs.
+
+% To get started, let us consider a simple program swapping two numbers located in memory.
+
+% \begin{minted}{haskell}
+% swap :: Script
+% swap = do
+%     load r0 0
+%     load r1 1
+%     store r1 0
+%     store r0 1
+%     halt
+% \end{minted}
+
+% The program consist from only 5 commands. The first two load the values from memory to two registers and the the second two stores them with locations swapped.
 
 \section{Conclusion and future work}
 
