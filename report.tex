@@ -58,11 +58,11 @@
 %----------------------------------------------------------------------------------------
 
 \HRule \\[0.4cm]
-{ \huge \bfseries Subtractor}\\[0.4cm] % Title of your document
+{ \huge \bfseries Computer Architecture Simulation and Verification}\\[0.4cm] % Title of your document
 \HRule \\[1.5cm]
 
-\textsc{\Large ISA simulation and verification framework}\\[0.5cm] % Major heading such as course name
-\textsc{\large Experience report}\\[0.5cm] % Minor heading such as course title
+\textsc{\Large A case study on a minimalistic\\ subtracting machine}\\[0.5cm] % Major heading such as course name
+% \textsc{\large Experience report}\\[0.5cm] % Minor heading such as course title
 
 %----------------------------------------------------------------------------------------
 %   AUTHOR SECTION
@@ -134,6 +134,7 @@ The Subtractor ISA has 4 general purpose registers, 2 flags and 8 commands. It o
 This section is structured as following: we first consider how the instructions syntax are represented, informally describe the intuitive meaning of each instruction; then we transfer to the model of machine state and execution, gradually building an interpreter for instructions in terms of transitions between Subtractor's states. We continue with the description of an embedded assembly language that enables us to build Subtractor programs reusing the Haskell's notation. The last subsection presents the examples of usage of the developed simulation and formal verification framework.
 
 \subsection{Subtractor instructions}
+\label{Instructions}
 
 Let us first consider the data type representing the instructions:
 
@@ -179,7 +180,110 @@ Subtractor state and instruction semantics
 
 \subsection{Subtractor assembly language}
 
-Subtractor assembly language
+To simulate the execution and formally verify properties of the Subtractor programs,
+it is construct the programs using the~\mintinline{haskell}{Program} data type, i.e.
+listing the pairings of values of type~\mintinline{haskell}{Instruction} with instruction addresses.
+However, construction these lists by hand is cumbersome. Luckily, the Haskell programming
+language provides powerful facilities for building embedded domain-specific languages, and
+we aim to exploit those facilities, concretely  to construct an embedded assembly language.
+That will enable us to use Haskell syntax to write programs that later will get translated
+to the values of the~\mintinline{haskell}{Program}.
+
+As a teaser, consider an example of an assembly language syntax we are aiming to build:
+
+\begin{minted}{haskell}
+swap :: Script
+swap = do
+    load r0 0
+    load r1 1
+    store r1 0
+    store r0 1
+    halt
+\end{minted}
+\label{syntaxExample}
+
+This simple program implements a swapping of two numbers placed in memory using two
+registers. the EDSL's syntax looks exactly like most assembly languages, but it
+is still a valid Haskell program. Let us now see how we can implement this with
+the help of Haskell's native support for monads.
+
+We use a specialised version of~\mintinline{haskell}{Writer}~\ref{Writer} monad
+to implement the assembly language embedding. Consider the following definitions:
+
+\begin{minted}{haskell}
+newtype Writer a = Writer {
+    runWriter :: [Instruction] -> (a, [Instruction])
+}
+
+type Script = Writer ()
+\end{minted}
+
+The~\mintinline{haskell}{Writer} monad is designed to be a computation not only
+producing a value, but also accumulation a some kind of log during the execution.
+In our case, the computation, being a syntactic program constructor, is not supposed
+to produce any kind of return values. The feature we really exploit is the logging one,
+i.e. each step of the monadic computation will extend the accumulating log with a
+value of type~\mintinline{haskell}{Instruction}. At the end of the day, the log will
+contain the list of instructions.
+
+We provide a convenient combinator~\mintinline{haskell}{write}, taking an instruction
+and adding it to a~\mintinline{haskell}{Script}.
+
+\begin{minted}{haskell}
+write :: Instruction -> Script
+write i = Writer (\p -> ((), i:p))
+\end{minted}
+
+We have almost implemented all the facilities to write a program~\ref{syntaxExample}.
+The only things left are the convenience combinators for embedding of every instruction.
+As an example consider the embedding of~\mintinline{haskell}{halt}
+and~\mintinline{haskell}{load} instructions:
+
+\begin{minted}{haskell}
+halt :: Script
+halt = write Halt
+
+load :: Register -> MemoryAddress -> Script
+load rX dmemaddr = write (Load rX dmemaddr)
+\end{minted}
+
+That is it, these embedder-functions just call the~\mintinline{haskell}{write}
+combinator to append the corresponding values of the~\mintinline{haskell}{Instruction}
+data type to the~\mintinline{haskell}{Script}.
+
+Now we are able to use the power of Haskell's~\mintinline{haskell}{do}-notation to
+build Subtractor assembly programs. The last bit is translating
+the~\mintinline{haskell}{Script}'s to~\mintinline{haskell}{Program}'s. We implement the
+translation with the following function:
+
+\begin{minted}{haskell}
+assemble :: Script -> Program
+assemble s = zip [0..] prg
+  where
+    prg = reverse $ snd $ runWriter s []
+\end{minted}
+
+We extract the list of instructions from the~\mintinline{haskell}{Writer} computation
+and pair each instruction with an instruction code. As a usage instance, consider the
+translation of the previously considered swapping program:
+
+\begin{minted}{haskell}
+[ (0, Load  0 0 )
+, (1, Load  1 1 )
+, (2, Store 1 0)
+, (3, Store 0 1)
+, (4, Halt     )
+]
+\end{minted}
+
+Haskell provides a variety of methods for EDSLs construction.
+We used one of them to build an embedding of Subtractor assembly language.
+With only a few lines of code we recruited the power of standard Haskell's
+~\mintinline{haskell}{do}-notation to write programs in our custom language and
+translate it to our custom data type.
+
+In the next subsection, we are going to build a simulation and formal verification
+framework to observe the results of programs' executions and verify their properties.
 
 \subsection{Simulating and formally verifying Subtractor programs}
 
