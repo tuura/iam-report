@@ -1,0 +1,45 @@
+\section{Introduction}
+
+The IAM instruction set architecture is designed to be a case study for
+the simulation and formal verification tools development. Thus, the ISA design
+is mainly driven by the dichotomy between tool's expressiveness and their
+implementation conciseness.
+We want the tools' implementations to be reasonable concise in order to keep
+focus on the
+implementation details and escape the mental overhead of maintaining a large
+code base. At the same time, the case study ISA must be sophisticated enough to
+yield interesting programs with non-trivial properties to be verified.
+
+The IAM ISA design was inspired by an extreme case of OISCs~--- one instruction
+set computers. OISCs have ISAs consisting from one instruction only and are
+beautiful in their simplicity. But the verification tool implemented for such a
+simple case would be too degenerate; thus we enriched the architecture with a
+limited set of additional instructions.
+
+In this report we present the IAM instruction set architecture and a Haskell
+framework for simulation, formal verification and synthesis of IAM programs.
+The framework includes an embedded assembly language and a framework to
+simulate the machine operation and verify properties of the IAM programs. As
+IAM architecture design is mainly driven by our Haskell implementation, we
+present all the involved concepts using their Haskell encoding. We believe that
+Haskell notation is clear enough and the chosen manner of presentation will
+enable us to focus on the formal verification framework implementation.
+
+IAM is designed to be simple but yet not trivial computer architecture. Since
+its main purpose is to be a case study for simulation and verification tools
+design, IAM's design is mainly driven by the dichotomy between tool's
+expressiveness and conciseness. We aim to explore the methods of development of
+formal verification tools thus we need a simple yet not trivial case study.
+
+The IAM ISA has 4 general purpose registers, 2 flags and 8 commands. It
+operates 64-bit words as data values and uses 8-bit words as memory addresses.
+Some instructions expect an 8-bit signed immediate argument.
+
+This section is structured as following: we first consider how the instructions
+syntax are represented, informally describe the intuitive meaning of each
+instruction; then we transfer to the model of machine state and execution,
+gradually building an interpreter for instructions in terms of transitions
+between IAM's states. We continue with the description of an embedded assembly
+language that enables us to build IAM programs reusing the Haskell's notation.
+The last subsection presents the examples of usage of the developed simulation
+and formal verification framework.

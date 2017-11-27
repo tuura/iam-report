@@ -1,0 +1,199 @@
+
+\section{The assembly language}
+
+To simulate the execution and formally verify properties of the IAM programs,
+it is possible to construct the programs using the~\mintinline{haskell}{Program} data type, i.e.
+listing the pairings of values of type~\mintinline{haskell}{Instruction} and instruction addresses.
+However, constructing these lists by hand is cumbersome. Luckily, the Haskell programming
+language provides powerful facilities for building embedded domain-specific languages, and
+we aim to exploit those facilities to construct an embedded assembly language.
+That will enable us to use Haskell syntax to write programs that later will get translated
+to the values of the~\mintinline{haskell}{Program} data type.
+
+\subsection{An example program}
+
+As a teaser, consider an example of an assembly language syntax we are aiming to build:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+sumArray :: Script
+sumArray = do
+    load r0 0       -- sum := 0, sum accumulator
+    load r2 254     -- i := n,   loop counter
+    loop <- label
+    store r2 255    -- store the value of i to use it for accessing the array
+    loadMI r1 255   -- load a[i]
+    store r1 254    -- put a[i] to cell 254
+    add r0 254      -- sum := sum + a[i]
+    add r2 253      -- i := i - 1
+    jumpZero 1      -- if i == 0 then halt
+    goto loop       -- else continue the loop
+    halt
+\end{minted}
+\caption{Sum an array of numbers}
+\label{syntaxExample}
+\end{figure}
+
+This program sums an sequence of numbers located in the memory. We will use this program as
+our running example through the rest of the report, simulating the execution of the program
+and verifying its correctness. Note that the EDSL's syntax looks exactly like the ones of most
+assembly languages, but it still is a valid Haskell program. The only
+divergence is the label declaration syntax. Let us now see how we can implement
+all this with the help of Haskell's native support for monads.
+
+\subsection{Using~\mintinline{haskell}{Writer} to write assembly}
+
+We use a specialised version of~\mintinline{haskell}{Writer} monad
+to implement the assembly language embedding.
+
+Please note, that we do not describe the actual monad instance for
+the~\mintinline{haskell}{Writer} data type, providing only an intuition.
+Please, refer to a Haskell textbook~\cite{Lipovaca:2011:LYH:2018642} for an
+extensive tutorial.
+
+Consider the following definitions:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+newtype Writer a = Writer {
+    runWriter :: [Instruction] -> (a, [Instruction])
+}
+
+type Script = Writer ()
+\end{minted}
+\end{figure}
+
+The~\mintinline{haskell}{Writer} monad is designed to be a computation not only
+producing a value, but also accumulation a some kind of a log during the execution.
+In our case, the computation, being a syntactic program constructor, is not supposed
+to produce any kind of return values. The feature we really exploit is the logging one,
+i.e. each step of the monadic computation will extend the accumulating log with a
+value of type~\mintinline{haskell}{Instruction}. At the end of the day, the log will
+contain the list of instructions.
+
+We provide a convenient combinator~\mintinline{haskell}{write}, taking an instruction
+and appending it to a~\mintinline{haskell}{Script}.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+write :: Instruction -> Script
+write i = Writer (\p -> ((), i:p))
+\end{minted}
+\end{figure}
+
+We have almost implemented all the facilities to write the program~\ref{syntaxExample}.
+The only things left are the convenience combinators for embedding of every instruction
+and labels jumps.
+
+Let us start with the instructions embeddings. As an example, consider the
+embedding of~\mintinline{haskell}{halt} and~\mintinline{haskell}{load} instructions:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+halt :: Script
+halt = write Halt
+
+load :: Register -> MemoryAddress -> Script
+load rX dmemaddr = write (Load rX dmemaddr)
+\end{minted}
+\end{figure}
+
+That is it, these embedder-functions just call the~\mintinline{haskell}{write}
+combinator to append the corresponding values of the~\mintinline{haskell}{Instruction}
+data type to the~\mintinline{haskell}{Script}. The rest of the instructions may
+be embedded similarly.
+
+\subsection{Jumping to labels}
+
+Now we need to implement labels and the~\mintinline{haskell}{goto} command. The machine
+instruction set has a conditional and unconditional jump instructions, but using them
+directly requires to calculate the instruction counter offset by hand. This is possible,
+but introduces an unnecessary mental overhead for the programmer. Fortunately, we
+can extend the assembly language syntax with labels and the~\mintinline{haskell}{goto}
+command on the level of syntax, no semantics modification required.
+
+The key idea is to represent labels as values the position of the instruction in the
+instruction list.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+label :: Writer Label
+label = Writer (\p -> (Label (length p), p))
+\end{minted}
+\caption{Labels are the instructions' indices}
+\label{label}
+\end{figure}
+
+The~\mintinline{haskell}{goto} command now may be implemented using the unconditional
+jump with an offset calculated as a difference between the current position in the program and
+one associated with label.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+goto :: Label -> Script
+goto (Label there) = do
+    Label here <- label
+    let offset = fromIntegral (there - here - 1)
+    jump offset
+\end{minted}
+\caption{Syntactic~\mintinline{haskell}{goto} implementation}
+\label{goto}
+\end{figure}
+
+The syntactic~\mintinline{haskell}{goto} implementation is free: we do not need
+to extend the semantics of the language to add it. However, the current implementation
+has a flaw. There is no label hoisting, i.e. no possibility to go to a label declared later
+in the program. Therefore, it is necessary to use the explicit offset jumps to
+go forward.
+
+\subsection{Assembling the~\mintinline{haskell}{Program}}
+
+Now we are able to use the power of Haskell's~\mintinline{haskell}{do}-notation to
+build IAM assembly programs. The last bit is translating
+the~\mintinline{haskell}{Script}'s to~\mintinline{haskell}{Program}'s. We implement the
+translation with the following function:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+assemble :: Script -> Program
+assemble s = zip [0..] prg
+  where
+    prg = reverse $ snd $ runWriter s []
+\end{minted}
+\caption{Assemble scripts to programs.}
+\end{figure}
+
+We extract the list of instructions from the~\mintinline{haskell}{Writer} computation
+and pair each instruction with an instruction code. As an usage instance, consider the
+translation of the previously considered summation program:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+[ (0, Load     0  0  )
+, (1, Load     2  254)
+, (2, Store    2  255)
+, (3, LoadMI   1  255)
+, (4, Store    1  254)
+, (5, Add      0  254)
+, (6, Add      2  253)
+, (7, JumpZero 1     )
+, (8, Jump     -7    )
+, (9, Halt           )
+]
+\end{minted}
+\caption{The compiled program.}
+\end{figure}
+
+Again, note that the labels implementation is purely syntactical and the resulting
+program contains explicit offset jumps.
+
+\subsection{Conclusion}
+
+Haskell provides a variety of methods for EDSLs construction.
+We used one of them to build an embedding of IAM assembly language.
+With only a few lines of code we recruited the power of standard Haskell's
+~\mintinline{haskell}{do}-notation to write programs in our custom language and
+translate it to our custom data type.
+
+In the next subsection, we are going to build a simulation and formal verification
+framework to observe the results of programs' executions and verify their properties.

@@ -1,0 +1,39 @@
+\section{Simulating and formally verifying programs}
+
+We have developed the types representing the IAM machine and built the facilities
+to construct the programs. Now we will assign the semantics to every instruction
+of the IAM instruction set in terms of how they alter the state of the machine.
+That will enable us to simulate the execution of programs and verify their properties
+by means of symbolic computation using the Haskell SBV library~\cite{SBV}.
+
+In this section, we will continue to use the example of array summation.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+sumArray :: Script
+sumArray = do
+    load r0 0       -- sum := 0, sum accumulator
+    load r2 254     -- i := n,   loop counter
+    loop <- label
+    store r2 255    -- store the value of i to use it for accessing the array
+    loadMI r1 255   -- load a[i]
+    store r1 254    -- put a[i] to cell 254
+    add r0 254      -- sum := sum + a[i]
+    add r2 253      -- i := i - 1
+    jumpZero 1      -- if i == 0 then halt
+    goto loop       -- else continue the loop
+    halt
+\end{minted}
+\caption{Sum an array of numbers}
+\label{arraySum}
+\end{figure}
+
+Firstly, we will simulate the execution of the program considering the concrete
+values to retrieve the programs' final state. Then, we will verify that the program
+indeed calculates the sum and does it in a ahead-known amount of time.
+
+\subsection{Program simulation}
+
+
+
+\subsection{Program verification}

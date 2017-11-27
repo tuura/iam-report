@@ -116,9 +116,11 @@ Dr. Andrey \textsc{Mokhov} % Supervisor's Name
 \end{titlepage}
 
 \begin{abstract}
-Subtractor is a minimalistic computer architecture developed to be
+IAM is a minimalistic computer architecture developed to be
 a case study for computer architecture simulation and verification frameworks
-design. To explore the design process of such tools we present a Haskell formalisation of Subtractor including an embedded assembly language, a simulator and a verification back end. We use symbolic execution and automated theorem proving to verify properties of Subtractor programs.
+design. To explore the design process of such tools we present a Haskell formalisation
+of IAM including an embedded assembly language, a simulator and a verification back end.
+We use symbolic execution and automated theorem proving to verify properties of IAM programs.
 
 \end{abstract}
 
@@ -126,70 +128,105 @@ design. To explore the design process of such tools we present a Haskell formali
 
 \section{Introduction}
 
-The Subtractor instruction set architecture is designed to be a case study for
-the simulation and formal verification tools development. Thus, the ISA design is mainly driven by the dichotomy between tool's expressiveness and their implementation conciseness.
-We want the tools' implementations to be reasonable concise in order to keep focus on the
-implementation details and escape the mental overhead of maintaining a large code base. At the same time, the case study ISA must be sophisticated enough to
+The IAM instruction set architecture is designed to be a case study for
+the simulation and formal verification tools development. Thus, the ISA design
+is mainly driven by the dichotomy between tool's expressiveness and their
+implementation conciseness.
+We want the tools' implementations to be reasonable concise in order to keep
+focus on the
+implementation details and escape the mental overhead of maintaining a large
+code base. At the same time, the case study ISA must be sophisticated enough to
 yield interesting programs with non-trivial properties to be verified.
 
-The Subtractor ISA design was inspired by an extreme case of OISCs~--- one instruction set computers. OISCs have ISAs consisting from one instruction only and are beautiful in their simplicity. But the verification tool implemented for such a simple case would be too degenerate; thus we enriched the architecture with a limited set of additional instructions.
+The IAM ISA design was inspired by an extreme case of OISCs~--- one instruction
+set computers. OISCs have ISAs consisting from one instruction only and are
+beautiful in their simplicity. But the verification tool implemented for such a
+simple case would be too degenerate; thus we enriched the architecture with a
+limited set of additional instructions.
 
-In this report we present the Subtractor instruction set architecture and a Haskell framework for simulation, formal verification and synthesis of Subtractor programs. The framework includes an embedded assembly language and a framework to simulate the Subtracor operation and verify properties of the Subtractor programs. As Subtractor architecture design is mainly driven by our Haskell implementation, we present all the involved concepts using their Haskell encoding. We believe that Haskell notation is clear enough and the chosen manner of presentation will enable us to focus on the formal verification framework implementation.
+In this report we present the IAM instruction set architecture and a Haskell
+framework for simulation, formal verification and synthesis of IAM programs.
+The framework includes an embedded assembly language and a framework to
+simulate the machine operation and verify properties of the IAM programs. As
+IAM architecture design is mainly driven by our Haskell implementation, we
+present all the involved concepts using their Haskell encoding. We believe that
+Haskell notation is clear enough and the chosen manner of presentation will
+enable us to focus on the formal verification framework implementation.
 
-\section{The Subtractor ISA and its Haskell implementation}
+IAM is designed to be simple but yet not trivial computer architecture. Since
+its main purpose is to be a case study for simulation and verification tools
+design, IAM's design is mainly driven by the dichotomy between tool's
+expressiveness and conciseness. We aim to explore the methods of development of
+formal verification tools thus we need a simple yet not trivial case study.
 
-Subtractor is designed to be simple but yet not trivial computer architecture. Since its main purpose is to be a case study for simulation and verification tools design, Substractors design is mainly driven by the dichotomy between tool's expressiveness and conciseness. We aim to explore the methods of development of formal verification tools thus we need a simple yet not trivial case study.
+The IAM ISA has 4 general purpose registers, 2 flags and 8 commands. It
+operates 64-bit words as data values and uses 8-bit words as memory addresses.
+Some instructions expect an 8-bit signed immediate argument.
 
-The Subtractor ISA has 4 general purpose registers, 2 flags and 8 commands. It overates 64 bit words as data values and uses 8 bit words as memory addresses. Some instructions expect an 8-bit signed immediate argument.
+This section is structured as following: we first consider how the instructions
+syntax are represented, informally describe the intuitive meaning of each
+instruction; then we transfer to the model of machine state and execution,
+gradually building an interpreter for instructions in terms of transitions
+between IAM's states. We continue with the description of an embedded assembly
+language that enables us to build IAM programs reusing the Haskell's notation.
+The last subsection presents the examples of usage of the developed simulation
+and formal verification framework.
 
-This section is structured as following: we first consider how the instructions syntax are represented, informally describe the intuitive meaning of each instruction; then we transfer to the model of machine state and execution, gradually building an interpreter for instructions in terms of transitions between Subtractor's states. We continue with the description of an embedded assembly language that enables us to build Subtractor programs reusing the Haskell's notation. The last subsection presents the examples of usage of the developed simulation and formal verification framework.
-
-\subsection{Subtractor instructions}
+\section{IAM instructions}
 \label{Instructions}
 
 Let us first consider the data type representing the instructions:
 
-% \begin{figure}
+\begin{figure}[H]
 \begin{minted}{haskell}
 data Instruction = Load     Register MemoryAddress
                  | LoadMI   Register MemoryAddress
-                 | Set      Register SImm8
+                 | Set      Register Byte
                  | Store    Register MemoryAddress
-                 | Subtract Register MemoryAddress
-                 | Jump     SImm8
-                 | JumpZero SImm8
+                 | Add      Register MemoryAddress
+                 | Jump     Byte
+                 | JumpZero Byte
                  | Halt
 \end{minted}
+\caption{Data type representing IAM instructions}
+\end{figure}
 
-Before getting to the description of each instruction, let us clarify the other data types involved. The current implementation of the formal verification framework is build on top of Haskell SBV (SMT Based Verification) library~\ref{SBV}. SBV performs symbolic execution of the Subtractor programs, provides a DSL for defining properties to be automatically checked by a SAT/SMT solver. The~\mintinline{haskell}{Register},~\mintinline{haskell}{MemoryAddress} and~\mintinline{haskell}{SImm8} types are internally represented as the symbolic words of appropriate length.
+Before getting to the description of each instruction, let us clarify the other
+data types involved. The current implementation of the formal verification
+framework is build on top of Haskell SBV (SMT Based Verification)
+library~\cite{SBV}. SBV performs symbolic execution of the IAM programs,
+provides a DSL for defining properties to be automatically checked by a SAT/SMT solver.
+The~\mintinline{haskell}{Register},~\mintinline{haskell}{MemoryAddress}
+and~\mintinline{haskell}{Byte} types are internally represented as the symbolic
+words of appropriate length.
 
-Having that in mind we now can informally describe the behaviour of every instruction. Later in this report we will implement an interpreter for Subtractor assembly language, thus defining an operational semantics for the syntax provided.
+Having that in mind we now can informally describe the behaviour of every instruction. Later in this report we will implement an interpreter for IAM assembly language, thus defining an operational semantics for the syntax provided.
 
-Informally, Subtractor instructions have the following meaning:
+Informally, IAM instructions have the following meaning:
 
 \begin{itemize}
     \item[\mintinline{haskell}{Load r memaddr}] loads a value from a memory location~\mintinline{haskell}{memaddr} to a register~\mintinline{haskell}{r}.
 
     \item[\mintinline{haskell}{LoadMI r memaddr}] loads a value from the memory location~\mintinline{haskell}{memaddr} to the register~\mintinline{haskell}{r} using indirect memory access mode, i.e. loading the value from~\mintinline{haskell}{memaddr} and using it as a memory address argument for the \mintinline{haskell}{Load} instruction.
 
-    \item[\mintinline{haskell}{Set r simm8}] loads the 8-bit immediate argument ~\mintinline{haskell}{simm8} to the register~\mintinline{haskell}{r}.
+    \item[\mintinline{haskell}{Set r Byte}] loads the 8-bit immediate argument ~\mintinline{haskell}{Byte} to the register~\mintinline{haskell}{r}.
 
     \item[\mintinline{haskell}{Store r memaddr}] stores a value from the register~\mintinline{haskell}{r} to the memory location~\mintinline{haskell}{memaddr}.
 
-    \item[\mintinline{haskell}{Subtract r memaddr}] subtracts a value placed in the memory location~\mintinline{haskell}{memaddr} from a value contained in the register~\mintinline{haskell}{r}.
+    \item[\mintinline{haskell}{Add r memaddr}] adds a value placed in the memory location~\mintinline{haskell}{memaddr} to a value contained in the register~\mintinline{haskell}{r}.
 
-    \item[\mintinline{haskell}{Jump simm8}] performs an unconditional jump. Modifies the machine instruction counter (see section~\ref{State}) by~\mintinline{haskell}{simm8} offset.
+    \item[\mintinline{haskell}{Jump Byte}] performs an unconditional jump. Modifies the machine instruction counter (see section~\ref{State}) by~\mintinline{haskell}{Byte} offset.
 
-    \item[\mintinline{haskell}{JumpZero simm8}] performs a conditional jump if the~\mintinline{haskell}{Zero} (see section~\ref{Flags}) flag is set.
+    \item[\mintinline{haskell}{JumpZero Byte}] performs a conditional jump if the~\mintinline{haskell}{Zero} (see section~\ref{Flags}) flag is set.
 
     \item[\mintinline{haskell}{Halt}] stops the execution. Sets the~\mintinline{haskell}{Halt} flag (see section~\ref{Flags}).
 \end{itemize}
 
-\subsection{Subtractor state and instruction semantics}
+\section{The state of IAM machine}
 
-Subtractor state and instruction semantics
 
-\subsection{The assembly language}
+
+\section{The assembly language}
 
 To simulate the execution and formally verify properties of the IAM programs,
 it is possible to construct the programs using the~\mintinline{haskell}{Program} data type, i.e.
@@ -200,7 +237,7 @@ we aim to exploit those facilities to construct an embedded assembly language.
 That will enable us to use Haskell syntax to write programs that later will get translated
 to the values of the~\mintinline{haskell}{Program} data type.
 
-\subsubsection{An example program}
+\subsection{An example program}
 
 As a teaser, consider an example of an assembly language syntax we are aiming to build:
 
@@ -231,7 +268,7 @@ assembly languages, but it still is a valid Haskell program. The only
 divergence is the label declaration syntax. Let us now see how we can implement
 all this with the help of Haskell's native support for monads.
 
-\subsubsection{Using~\mintinline{haskell}{Writer} to write assembly}
+\subsection{Using~\mintinline{haskell}{Writer} to write assembly}
 
 We use a specialised version of~\mintinline{haskell}{Writer} monad
 to implement the assembly language embedding.
@@ -293,7 +330,7 @@ combinator to append the corresponding values of the~\mintinline{haskell}{Instru
 data type to the~\mintinline{haskell}{Script}. The rest of the instructions may
 be embedded similarly.
 
-\subsubsection{Jumping to labels}
+\subsection{Jumping to labels}
 
 Now we need to implement labels and the~\mintinline{haskell}{goto} command. The machine
 instruction set has a conditional and unconditional jump instructions, but using them
@@ -336,10 +373,10 @@ has a flaw. There is no label hoisting, i.e. no possibility to go to a label dec
 in the program. Therefore, it is necessary to use the explicit offset jumps to
 go forward.
 
-\subsubsection{Assembling the~\mintinline{haskell}{Program}}
+\subsection{Assembling the~\mintinline{haskell}{Program}}
 
 Now we are able to use the power of Haskell's~\mintinline{haskell}{do}-notation to
-build Subtractor assembly programs. The last bit is translating
+build IAM assembly programs. The last bit is translating
 the~\mintinline{haskell}{Script}'s to~\mintinline{haskell}{Program}'s. We implement the
 translation with the following function:
 
@@ -377,7 +414,7 @@ translation of the previously considered summation program:
 Again, note that the labels implementation is purely syntactical and the resulting
 program contains explicit offset jumps.
 
-\subsubsection{Conclusion}
+\subsection{Conclusion}
 
 Haskell provides a variety of methods for EDSLs construction.
 We used one of them to build an embedding of IAM assembly language.
@@ -388,9 +425,130 @@ translate it to our custom data type.
 In the next subsection, we are going to build a simulation and formal verification
 framework to observe the results of programs' executions and verify their properties.
 
-\subsection{Simulating and formally verifying programs}
+\section{Instruction semantics}
+
+The~\mintinline{haskell}{Instruction} data type represent the syntax of IAM instructions.
+We assign them the semantics by implementing an interpreter
+function~\mintinline{haskell}{execute} that performs pattern-matching on data every
+constructor of the~\mintinline{haskell}{Instruction} and builds a computation in the
+~\mintinline{haskell}{Machine} monad --- a transformer of IAM state. This function
+is the heart of the simulation and formal verification framework.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+execute :: Instruction -> Machine ()
+execute (Halt                ) = executeHalt
+execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
+execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
+execute (Set      rX simm    ) = executeSet      rX simm
+execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
+execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
+execute (Jump     simm       ) = executeJump     simm
+execute (JumpZero simm       ) = executeJumpZero simm
+\end{minted}
+\caption{An interpreter of IAM instruction set.}
+\label{execute}
+\end{figure}
+
+Let us now consider the semantics of some of the instructions.
+
+The simplest thing is halting. If the interpreter sees the halt instruction, it
+sets the~\mintinline{haskell}{Halted} flag preventing the following execution.
+The~\mintinline{haskell}{writeFlag} does the actual machine state modification,
+advancing the clock and setting the flag.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+executeHalt :: Machine ()
+executeHalt = writeFlag Halted true
+
+writeFlag :: Flag -> SBool -> Machine ()
+writeFlag flag value = do
+    delay 1
+    modify $ \state ->
+        state { flags = writeArray (flags state)
+                                   (flagId flag)
+                                   value }
+\end{minted}
+\caption{Semantics of the~\mintinline{haskell}{Halt} instruction.}
+\label{haltSemantics}
+\end{figure}
+
+As a more involved example, let us add the semantics to the addition instruction.
+It operates with a register containing a first term and a memory location referring
+to the second one. The~\mintinline{haskell}{executeAdd} essentially retrieves the terms,
+adds them, places the result to the register, and sets the\mintinline{haskell}{Zero}
+flag if the result is zero.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+executeAdd :: Register -> MemoryAddress -> Machine ()
+executeAdd rX dmemaddr = do
+    x <- readRegister rX
+    y <- readMemory dmemaddr
+    let z = x + y
+    writeFlag Zero (z .== 0)
+    writeRegister rX z
+\end{minted}
+\caption{Semantics of the~\mintinline{haskell}{Add} instruction.}
+\label{addSemantics}
+\end{figure}
+
+An interesting note to make here is that in the implementation of these functions
+we are using Haskell as a~\emph{metalanguage}. We are operating the machine as
+a puppet master, using the external meta-notions of addition, comparison and let-binding.
+From the machine's point of view, we have an unlimited memory and act instantly.
+That gives us an unlimited power. Later in this section we'll see how hard it is
+to achieve such a power using only IAM's internal entities.
+
+As the most sophisticated example we give here, consider the semantics of the
+~\mintinline{haskell}{JumpZero} instruction.It uses SBV's symbolic conditional
+operation~\mintinline{haskell}{ite} to test if the~\mintinline{haskell}{Zero} flag
+is set, and, if so, modifies the machine's instruction counter by a provide offset.
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+executeJumpZero :: Byte -> Machine ()
+executeJumpZero offset = do
+    zeroIsSet <- readFlag Zero
+    ic <- instructionCounter <$> get
+    let ic' = ite zeroIsSet (ic + fromByte offset) ic
+    modify $ \currentState ->
+        currentState {instructionCounter = ic'}
+\end{minted}
+\caption{Semantics of the~\mintinline{haskell}{JumpZero} instruction.}
+\label{jumpZeroSemantics}
+\end{figure}
+
+The semantics of the conditional jump instruction turns out to be one of the
+most sensible parts of a verification framework that relies on symbolical execution.
+It is vital to bear in mind the notion of~\emph{symbolic termination}. In our special
+case the situation starts to get difficult if the instruction counter value becomes
+purely symbolic, i.e. the program termination starts to depend on a symbolic value.
+There are ways to control symbolic termination, but current state of implementation of
+the verification framework is fragile and relies on the user to prevent the dangerous
+situations from happening. Currently, the verification framework uses an external
+counter of state transitions that guaranties termination.
+
+The implementations of these three instruction interpreters cover all the interesting
+features of the framework's implementation. Please consult to the framework
+repository~\cite{IAMGithub} for the full source code.
+
+\section{Simulating and formally verifying programs}
+
+We have developed the types representing the IAM machine and built the facilities
+to construct the programs. Now we will assign the semantics to every instruction
+of the IAM instruction set in terms of how they alter the state of the machine.
+That will enable us to simulate the execution of programs and verify their properties
+by means of symbolic computation using the Haskell SBV library~\cite{SBV}.
 
 
+
+\subsection{Program simulation}
+
+
+
+\subsection{Program verification}
 
 \section{Conclusion and future work}
 

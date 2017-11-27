@@ -15,7 +15,7 @@ all: report.pdf
 # missing file reference and interactively asking you for an alternative.
 
 report.pdf: report.tex
-	latexmk -pdf -pdflatex="pdflatex -shell-escape -interactive=nonstopmode" -use-make report.tex
+	latexmk -pdf -pdflatex="pdflatex -shell-escape -interactive=nonstopmode" -use-make tex/report.tex
 
 clean:
 	latexmk -CA

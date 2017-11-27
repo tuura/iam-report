@@ -1,0 +1,49 @@
+\section{IAM instructions}
+\label{Instructions}
+
+Let us first consider the data type representing the instructions:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+data Instruction = Load     Register MemoryAddress
+                 | LoadMI   Register MemoryAddress
+                 | Set      Register Byte
+                 | Store    Register MemoryAddress
+                 | Add      Register MemoryAddress
+                 | Jump     Byte
+                 | JumpZero Byte
+                 | Halt
+\end{minted}
+\caption{Data type representing IAM instructions}
+\end{figure}
+
+Before getting to the description of each instruction, let us clarify the other
+data types involved. The current implementation of the formal verification
+framework is build on top of Haskell SBV (SMT Based Verification)
+library~\cite{SBV}. SBV performs symbolic execution of the IAM programs,
+provides a DSL for defining properties to be automatically checked by a SAT/SMT solver.
+The~\mintinline{haskell}{Register},~\mintinline{haskell}{MemoryAddress}
+and~\mintinline{haskell}{Byte} types are internally represented as the symbolic
+words of appropriate length.
+
+Having that in mind we now can informally describe the behaviour of every instruction. Later in this report we will implement an interpreter for IAM assembly language, thus defining an operational semantics for the syntax provided.
+
+Informally, IAM instructions have the following meaning:
+
+\begin{itemize}
+    \item[\mintinline{haskell}{Load r memaddr}] loads a value from a memory location~\mintinline{haskell}{memaddr} to a register~\mintinline{haskell}{r}.
+
+    \item[\mintinline{haskell}{LoadMI r memaddr}] loads a value from the memory location~\mintinline{haskell}{memaddr} to the register~\mintinline{haskell}{r} using indirect memory access mode, i.e. loading the value from~\mintinline{haskell}{memaddr} and using it as a memory address argument for the \mintinline{haskell}{Load} instruction.
+
+    \item[\mintinline{haskell}{Set r Byte}] loads the 8-bit immediate argument ~\mintinline{haskell}{Byte} to the register~\mintinline{haskell}{r}.
+
+    \item[\mintinline{haskell}{Store r memaddr}] stores a value from the register~\mintinline{haskell}{r} to the memory location~\mintinline{haskell}{memaddr}.
+
+    \item[\mintinline{haskell}{Add r memaddr}] adds a value placed in the memory location~\mintinline{haskell}{memaddr} to a value contained in the register~\mintinline{haskell}{r}.
+
+    \item[\mintinline{haskell}{Jump Byte}] performs an unconditional jump. Modifies the machine instruction counter (see section~\ref{State}) by~\mintinline{haskell}{Byte} offset.
+
+    \item[\mintinline{haskell}{JumpZero Byte}] performs a conditional jump if the~\mintinline{haskell}{Zero} (see section~\ref{Flags}) flag is set.
+
+    \item[\mintinline{haskell}{Halt}] stops the execution. Sets the~\mintinline{haskell}{Halt} flag (see section~\ref{Flags}).
+\end{itemize}
