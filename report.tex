@@ -39,7 +39,7 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{minted}
-
+\usepackage{longtable}
 \usepackage[
   backend=biber,
   hyperref=auto,
@@ -49,6 +49,15 @@
   bibstyle=gost-numeric,
 ]{biblatex}
 \addbibresource{biblio.bib}
+
+
+\makeatletter
+  \defineshorthand[english]{"/}{\babelhyphen{nobreak}}
+  \addto\extrasenglish{
+    \languageshorthands{english}
+    \useshorthands{"}
+  }
+\makeatother
 
 \begin{document}
 
@@ -72,7 +81,7 @@
 { \huge \bfseries Computer Architecture Simulation and Verification}\\[0.4cm] % Title of your document
 \HRule \\[1.5cm]
 
-\textsc{\Large A case study on a minimalistic\\ subtracting machine}\\[0.5cm] % Major heading such as course name
+\textsc{\Large A case study on a minimalistic\\ adding machine}\\[0.5cm] % Major heading such as course name
 % \textsc{\large Experience report}\\[0.5cm] % Minor heading such as course title
 
 %----------------------------------------------------------------------------------------
@@ -88,10 +97,11 @@ Georgy \textsc{Lukyanov} % Your name
 ~
 \begin{minipage}{0.4\textwidth}
 \begin{flushright} \large
-\emph{Supervisor:} \\
-Dr. Andrey \textsc{Mokhov} % Supervisor's Name
+% \emph{Supervisor:} \\
+% Dr. Andrey \textsc{Mokhov} % Supervisor's Name
 \end{flushright}
-\end{minipage}\\[2cm]
+\end{minipage}
+\\[2cm]
 
 % If you don't want a supervisor, uncomment the two lines below and remove the section above
 %\Large \emph{Author:}\\
@@ -116,443 +126,31 @@ Dr. Andrey \textsc{Mokhov} % Supervisor's Name
 \end{titlepage}
 
 \begin{abstract}
-IAM is a minimalistic computer architecture developed to be
-a case study for computer architecture simulation and verification frameworks
-design. To explore the design process of such tools we present a Haskell formalisation
-of IAM including an embedded assembly language, a simulator and a verification back end.
-We use symbolic execution and automated theorem proving to verify properties of IAM programs.
+
+Software and hardware systems designed for sensitive application are required to be reliable.
+Formal methods are a mathematically structured way of software and hardware verification.
+Specifically, symbolic execution and automated theorem proving allow to simulate the operation
+and verify the properties of systems. To explore the design process of instruction set
+architecture simulation and formal verification tools we present a Haskell formalisation of
+IAM\footnote{Inglorious Adding Machine}~--- a minimalistic computer architecture. The developed tool includes an embedded assembly language, a simulator and a verification back end.
 
 \end{abstract}
 
 \tableofcontents
 
-\section{Introduction}
+\input{intro.tex}
 
-The IAM instruction set architecture is designed to be a case study for
-the simulation and formal verification tools development. Thus, the ISA design
-is mainly driven by the dichotomy between tool's expressiveness and their
-implementation conciseness.
-We want the tools' implementations to be reasonable concise in order to keep
-focus on the
-implementation details and escape the mental overhead of maintaining a large
-code base. At the same time, the case study ISA must be sophisticated enough to
-yield interesting programs with non-trivial properties to be verified.
+\input{instructions.tex}
 
-The IAM ISA design was inspired by an extreme case of OISCs~--- one instruction
-set computers. OISCs have ISAs consisting from one instruction only and are
-beautiful in their simplicity. But the verification tool implemented for such a
-simple case would be too degenerate; thus we enriched the architecture with a
-limited set of additional instructions.
+\input{state.tex}
 
-In this report we present the IAM instruction set architecture and a Haskell
-framework for simulation, formal verification and synthesis of IAM programs.
-The framework includes an embedded assembly language and a framework to
-simulate the machine operation and verify properties of the IAM programs. As
-IAM architecture design is mainly driven by our Haskell implementation, we
-present all the involved concepts using their Haskell encoding. We believe that
-Haskell notation is clear enough and the chosen manner of presentation will
-enable us to focus on the formal verification framework implementation.
+\input{assembly.tex}
 
-IAM is designed to be simple but yet not trivial computer architecture. Since
-its main purpose is to be a case study for simulation and verification tools
-design, IAM's design is mainly driven by the dichotomy between tool's
-expressiveness and conciseness. We aim to explore the methods of development of
-formal verification tools thus we need a simple yet not trivial case study.
+\input{semantics.tex}
 
-The IAM ISA has 4 general purpose registers, 2 flags and 8 commands. It
-operates 64-bit words as data values and uses 8-bit words as memory addresses.
-Some instructions expect an 8-bit signed immediate argument.
+\input{verification.tex}
 
-This section is structured as following: we first consider how the instructions
-syntax are represented, informally describe the intuitive meaning of each
-instruction; then we transfer to the model of machine state and execution,
-gradually building an interpreter for instructions in terms of transitions
-between IAM's states. We continue with the description of an embedded assembly
-language that enables us to build IAM programs reusing the Haskell's notation.
-The last subsection presents the examples of usage of the developed simulation
-and formal verification framework.
-
-\section{IAM instructions}
-\label{Instructions}
-
-Let us first consider the data type representing the instructions:
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-data Instruction = Load     Register MemoryAddress
-                 | LoadMI   Register MemoryAddress
-                 | Set      Register Byte
-                 | Store    Register MemoryAddress
-                 | Add      Register MemoryAddress
-                 | Jump     Byte
-                 | JumpZero Byte
-                 | Halt
-\end{minted}
-\caption{Data type representing IAM instructions}
-\end{figure}
-
-Before getting to the description of each instruction, let us clarify the other
-data types involved. The current implementation of the formal verification
-framework is build on top of Haskell SBV (SMT Based Verification)
-library~\cite{SBV}. SBV performs symbolic execution of the IAM programs,
-provides a DSL for defining properties to be automatically checked by a SAT/SMT solver.
-The~\mintinline{haskell}{Register},~\mintinline{haskell}{MemoryAddress}
-and~\mintinline{haskell}{Byte} types are internally represented as the symbolic
-words of appropriate length.
-
-Having that in mind we now can informally describe the behaviour of every instruction. Later in this report we will implement an interpreter for IAM assembly language, thus defining an operational semantics for the syntax provided.
-
-Informally, IAM instructions have the following meaning:
-
-\begin{itemize}
-    \item[\mintinline{haskell}{Load r memaddr}] loads a value from a memory location~\mintinline{haskell}{memaddr} to a register~\mintinline{haskell}{r}.
-
-    \item[\mintinline{haskell}{LoadMI r memaddr}] loads a value from the memory location~\mintinline{haskell}{memaddr} to the register~\mintinline{haskell}{r} using indirect memory access mode, i.e. loading the value from~\mintinline{haskell}{memaddr} and using it as a memory address argument for the \mintinline{haskell}{Load} instruction.
-
-    \item[\mintinline{haskell}{Set r Byte}] loads the 8-bit immediate argument ~\mintinline{haskell}{Byte} to the register~\mintinline{haskell}{r}.
-
-    \item[\mintinline{haskell}{Store r memaddr}] stores a value from the register~\mintinline{haskell}{r} to the memory location~\mintinline{haskell}{memaddr}.
-
-    \item[\mintinline{haskell}{Add r memaddr}] adds a value placed in the memory location~\mintinline{haskell}{memaddr} to a value contained in the register~\mintinline{haskell}{r}.
-
-    \item[\mintinline{haskell}{Jump Byte}] performs an unconditional jump. Modifies the machine instruction counter (see section~\ref{State}) by~\mintinline{haskell}{Byte} offset.
-
-    \item[\mintinline{haskell}{JumpZero Byte}] performs a conditional jump if the~\mintinline{haskell}{Zero} (see section~\ref{Flags}) flag is set.
-
-    \item[\mintinline{haskell}{Halt}] stops the execution. Sets the~\mintinline{haskell}{Halt} flag (see section~\ref{Flags}).
-\end{itemize}
-
-\section{The state of IAM machine}
-
-
-
-\section{The assembly language}
-
-To simulate the execution and formally verify properties of the IAM programs,
-it is possible to construct the programs using the~\mintinline{haskell}{Program} data type, i.e.
-listing the pairings of values of type~\mintinline{haskell}{Instruction} and instruction addresses.
-However, constructing these lists by hand is cumbersome. Luckily, the Haskell programming
-language provides powerful facilities for building embedded domain-specific languages, and
-we aim to exploit those facilities to construct an embedded assembly language.
-That will enable us to use Haskell syntax to write programs that later will get translated
-to the values of the~\mintinline{haskell}{Program} data type.
-
-\subsection{An example program}
-
-As a teaser, consider an example of an assembly language syntax we are aiming to build:
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-sumArray :: Script
-sumArray = do
-    load r0 0       -- sum := 0, sum accumulator
-    load r2 254     -- i := n,   loop counter
-    loop <- label
-    store r2 255    -- store the value of i to use it for accessing the array
-    loadMI r1 255   -- load a[i]
-    store r1 254    -- put a[i] to cell 254
-    add r0 254      -- sum := sum + a[i]
-    add r2 253      -- i := i - 1
-    jumpZero 1      -- if i == 0 then halt
-    goto loop       -- else continue the loop
-    halt
-\end{minted}
-\caption{Sum an array of numbers}
-\label{syntaxExample}
-\end{figure}
-
-This program sums an sequence of numbers located in the memory. We will use this program as
-our running example through the rest of the report, simulating the execution of the program
-and verifying its correctness. Note that the EDSL's syntax looks exactly like the ones of most
-assembly languages, but it still is a valid Haskell program. The only
-divergence is the label declaration syntax. Let us now see how we can implement
-all this with the help of Haskell's native support for monads.
-
-\subsection{Using~\mintinline{haskell}{Writer} to write assembly}
-
-We use a specialised version of~\mintinline{haskell}{Writer} monad
-to implement the assembly language embedding.
-
-Please note, that we do not describe the actual monad instance for
-the~\mintinline{haskell}{Writer} data type, providing only an intuition.
-Please, refer to a Haskell textbook~\cite{Lipovaca:2011:LYH:2018642} for an
-extensive tutorial.
-
-Consider the following definitions:
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-newtype Writer a = Writer {
-    runWriter :: [Instruction] -> (a, [Instruction])
-}
-
-type Script = Writer ()
-\end{minted}
-\end{figure}
-
-The~\mintinline{haskell}{Writer} monad is designed to be a computation not only
-producing a value, but also accumulation a some kind of a log during the execution.
-In our case, the computation, being a syntactic program constructor, is not supposed
-to produce any kind of return values. The feature we really exploit is the logging one,
-i.e. each step of the monadic computation will extend the accumulating log with a
-value of type~\mintinline{haskell}{Instruction}. At the end of the day, the log will
-contain the list of instructions.
-
-We provide a convenient combinator~\mintinline{haskell}{write}, taking an instruction
-and appending it to a~\mintinline{haskell}{Script}.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-write :: Instruction -> Script
-write i = Writer (\p -> ((), i:p))
-\end{minted}
-\end{figure}
-
-We have almost implemented all the facilities to write the program~\ref{syntaxExample}.
-The only things left are the convenience combinators for embedding of every instruction
-and labels jumps.
-
-Let us start with the instructions embeddings. As an example, consider the
-embedding of~\mintinline{haskell}{halt} and~\mintinline{haskell}{load} instructions:
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-halt :: Script
-halt = write Halt
-
-load :: Register -> MemoryAddress -> Script
-load rX dmemaddr = write (Load rX dmemaddr)
-\end{minted}
-\end{figure}
-
-That is it, these embedder-functions just call the~\mintinline{haskell}{write}
-combinator to append the corresponding values of the~\mintinline{haskell}{Instruction}
-data type to the~\mintinline{haskell}{Script}. The rest of the instructions may
-be embedded similarly.
-
-\subsection{Jumping to labels}
-
-Now we need to implement labels and the~\mintinline{haskell}{goto} command. The machine
-instruction set has a conditional and unconditional jump instructions, but using them
-directly requires to calculate the instruction counter offset by hand. This is possible,
-but introduces an unnecessary mental overhead for the programmer. Fortunately, we
-can extend the assembly language syntax with labels and the~\mintinline{haskell}{goto}
-command on the level of syntax, no semantics modification required.
-
-The key idea is to represent labels as values the position of the instruction in the
-instruction list.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-label :: Writer Label
-label = Writer (\p -> (Label (length p), p))
-\end{minted}
-\caption{Labels are the instructions' indices}
-\label{label}
-\end{figure}
-
-The~\mintinline{haskell}{goto} command now may be implemented using the unconditional
-jump with an offset calculated as a difference between the current position in the program and
-one associated with label.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-goto :: Label -> Script
-goto (Label there) = do
-    Label here <- label
-    let offset = fromIntegral (there - here - 1)
-    jump offset
-\end{minted}
-\caption{Syntactic~\mintinline{haskell}{goto} implementation}
-\label{goto}
-\end{figure}
-
-The syntactic~\mintinline{haskell}{goto} implementation is free: we do not need
-to extend the semantics of the language to add it. However, the current implementation
-has a flaw. There is no label hoisting, i.e. no possibility to go to a label declared later
-in the program. Therefore, it is necessary to use the explicit offset jumps to
-go forward.
-
-\subsection{Assembling the~\mintinline{haskell}{Program}}
-
-Now we are able to use the power of Haskell's~\mintinline{haskell}{do}-notation to
-build IAM assembly programs. The last bit is translating
-the~\mintinline{haskell}{Script}'s to~\mintinline{haskell}{Program}'s. We implement the
-translation with the following function:
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-assemble :: Script -> Program
-assemble s = zip [0..] prg
-  where
-    prg = reverse $ snd $ runWriter s []
-\end{minted}
-\caption{Assemble scripts to programs.}
-\end{figure}
-
-We extract the list of instructions from the~\mintinline{haskell}{Writer} computation
-and pair each instruction with an instruction code. As an usage instance, consider the
-translation of the previously considered summation program:
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-[ (0, Load     0  0  )
-, (1, Load     2  254)
-, (2, Store    2  255)
-, (3, LoadMI   1  255)
-, (4, Store    1  254)
-, (5, Add      0  254)
-, (6, Add      2  253)
-, (7, JumpZero 1     )
-, (8, Jump     -7    )
-, (9, Halt           )
-]
-\end{minted}
-\caption{The compiled program.}
-\end{figure}
-
-Again, note that the labels implementation is purely syntactical and the resulting
-program contains explicit offset jumps.
-
-\subsection{Conclusion}
-
-Haskell provides a variety of methods for EDSLs construction.
-We used one of them to build an embedding of IAM assembly language.
-With only a few lines of code we recruited the power of standard Haskell's
-~\mintinline{haskell}{do}-notation to write programs in our custom language and
-translate it to our custom data type.
-
-In the next subsection, we are going to build a simulation and formal verification
-framework to observe the results of programs' executions and verify their properties.
-
-\section{Instruction semantics}
-
-The~\mintinline{haskell}{Instruction} data type represent the syntax of IAM instructions.
-We assign them the semantics by implementing an interpreter
-function~\mintinline{haskell}{execute} that performs pattern-matching on data every
-constructor of the~\mintinline{haskell}{Instruction} and builds a computation in the
-~\mintinline{haskell}{Machine} monad --- a transformer of IAM state. This function
-is the heart of the simulation and formal verification framework.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-execute :: Instruction -> Machine ()
-execute (Halt                ) = executeHalt
-execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
-execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
-execute (Set      rX simm    ) = executeSet      rX simm
-execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
-execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
-execute (Jump     simm       ) = executeJump     simm
-execute (JumpZero simm       ) = executeJumpZero simm
-\end{minted}
-\caption{An interpreter of IAM instruction set.}
-\label{execute}
-\end{figure}
-
-Let us now consider the semantics of some of the instructions.
-
-The simplest thing is halting. If the interpreter sees the halt instruction, it
-sets the~\mintinline{haskell}{Halted} flag preventing the following execution.
-The~\mintinline{haskell}{writeFlag} does the actual machine state modification,
-advancing the clock and setting the flag.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-executeHalt :: Machine ()
-executeHalt = writeFlag Halted true
-
-writeFlag :: Flag -> SBool -> Machine ()
-writeFlag flag value = do
-    delay 1
-    modify $ \state ->
-        state { flags = writeArray (flags state)
-                                   (flagId flag)
-                                   value }
-\end{minted}
-\caption{Semantics of the~\mintinline{haskell}{Halt} instruction.}
-\label{haltSemantics}
-\end{figure}
-
-As a more involved example, let us add the semantics to the addition instruction.
-It operates with a register containing a first term and a memory location referring
-to the second one. The~\mintinline{haskell}{executeAdd} essentially retrieves the terms,
-adds them, places the result to the register, and sets the\mintinline{haskell}{Zero}
-flag if the result is zero.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-executeAdd :: Register -> MemoryAddress -> Machine ()
-executeAdd rX dmemaddr = do
-    x <- readRegister rX
-    y <- readMemory dmemaddr
-    let z = x + y
-    writeFlag Zero (z .== 0)
-    writeRegister rX z
-\end{minted}
-\caption{Semantics of the~\mintinline{haskell}{Add} instruction.}
-\label{addSemantics}
-\end{figure}
-
-An interesting note to make here is that in the implementation of these functions
-we are using Haskell as a~\emph{metalanguage}. We are operating the machine as
-a puppet master, using the external meta-notions of addition, comparison and let-binding.
-From the machine's point of view, we have an unlimited memory and act instantly.
-That gives us an unlimited power. Later in this section we'll see how hard it is
-to achieve such a power using only IAM's internal entities.
-
-As the most sophisticated example we give here, consider the semantics of the
-~\mintinline{haskell}{JumpZero} instruction.It uses SBV's symbolic conditional
-operation~\mintinline{haskell}{ite} to test if the~\mintinline{haskell}{Zero} flag
-is set, and, if so, modifies the machine's instruction counter by a provide offset.
-
-\begin{figure}[H]
-\begin{minted}{haskell}
-executeJumpZero :: Byte -> Machine ()
-executeJumpZero offset = do
-    zeroIsSet <- readFlag Zero
-    ic <- instructionCounter <$> get
-    let ic' = ite zeroIsSet (ic + fromByte offset) ic
-    modify $ \currentState ->
-        currentState {instructionCounter = ic'}
-\end{minted}
-\caption{Semantics of the~\mintinline{haskell}{JumpZero} instruction.}
-\label{jumpZeroSemantics}
-\end{figure}
-
-The semantics of the conditional jump instruction turns out to be one of the
-most sensible parts of a verification framework that relies on symbolical execution.
-It is vital to bear in mind the notion of~\emph{symbolic termination}. In our special
-case the situation starts to get difficult if the instruction counter value becomes
-purely symbolic, i.e. the program termination starts to depend on a symbolic value.
-There are ways to control symbolic termination, but current state of implementation of
-the verification framework is fragile and relies on the user to prevent the dangerous
-situations from happening. Currently, the verification framework uses an external
-counter of state transitions that guaranties termination.
-
-The implementations of these three instruction interpreters cover all the interesting
-features of the framework's implementation. Please consult to the framework
-repository~\cite{IAMGithub} for the full source code.
-
-\section{Simulating and formally verifying programs}
-
-We have developed the types representing the IAM machine and built the facilities
-to construct the programs. Now we will assign the semantics to every instruction
-of the IAM instruction set in terms of how they alter the state of the machine.
-That will enable us to simulate the execution of programs and verify their properties
-by means of symbolic computation using the Haskell SBV library~\cite{SBV}.
-
-
-
-\subsection{Program simulation}
-
-
-
-\subsection{Program verification}
-
-\section{Conclusion and future work}
-
-The verification part of the developed framework still requires a lot of work to be usable. Currently it allow to verify only basic properties of short programs. One of the closest development goals is to enable it to verify programs with loops.
+\input{conclusion.tex}
 
 % Печать списка литературы (библиографии)
 \printbibliography[

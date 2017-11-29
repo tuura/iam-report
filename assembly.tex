@@ -21,7 +21,8 @@ sumArray = do
     load r0 0       -- sum := 0, sum accumulator
     load r2 254     -- i := n,   loop counter
     loop <- label
-    store r2 255    -- store the value of i to use it for accessing the array
+    store r2 255    -- store the value of i to use it
+                    -- for accessing the array
     loadMI r1 255   -- load a[i]
     store r1 254    -- put a[i] to cell 254
     add r0 254      -- sum := sum + a[i]

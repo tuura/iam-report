@@ -1,12 +1,40 @@
 \section{Introduction}
 
+Software and hardware systems are required to be reliable.
+For example, space satellites must be able to operate autonomously in space,
+adapting to short term and long term changes,
+with required lifetimes in the order of decades,
+and one"/minute downtime failure of banking software may lead to significant expenses.
+Safety and solidity of software may be achieved through testing and post"/design quality
+assurance, but there is always a possibility to leave some branches of an operations
+scenario untested, leading to a potential disaster.
+
+In contrast with post"/design testing, that does not provide full
+correctness guarantees, formal methods yield a systematic approach for developing
+complex systems in a correct"/by"/construction manner. One reason of advancement of
+formal methods in comparison to testing is a maximal possible elimination of human errors.
+For instance, automated theorem provers perform exhaustive search
+through entire space of possible states of the system and~\emph{formally prove} its
+operation to be correct in every single case, completely excluding any possibility of
+non"/specified execution(presuming the correctness of a specification).
+
+Formal verification is performed by means of a verification tool,
+a~\emph{verification metalanguage} that is used to formalise the model of the system.
+However, the development of formal verification tools is by itself a hard problem.
+There is little to no escape from the barber paradox here, therefore most formal
+verification tools have a~\emph{trusted core} --- a part of the implementation that
+is not itself verified. This fact obliges the developers of a verification framework
+to constantly evaluate the correctness of the implementation. Thus, it is vital
+to keep the trusted core implementation clear and as concise as possible. This report
+is dedicated to a case study of development of a simulation and formal verification
+framework in the domain of computer architecture.
+
 The IAM instruction set architecture is designed to be a case study for
 the simulation and formal verification tools development. Thus, the ISA design
 is mainly driven by the dichotomy between tool's expressiveness and their
 implementation conciseness.
 We want the tools' implementations to be reasonable concise in order to keep
-focus on the
-implementation details and escape the mental overhead of maintaining a large
+focus on the implementation details and escape the mental overhead of maintaining a large
 code base. At the same time, the case study ISA must be sophisticated enough to
 yield interesting programs with non-trivial properties to be verified.
 
@@ -35,7 +63,7 @@ The IAM ISA has 4 general purpose registers, 2 flags and 8 commands. It
 operates 64-bit words as data values and uses 8-bit words as memory addresses.
 Some instructions expect an 8-bit signed immediate argument.
 
-This section is structured as following: we first consider how the instructions
+This report is structured as following: we first consider how the instructions
 syntax are represented, informally describe the intuitive meaning of each
 instruction; then we transfer to the model of machine state and execution,
 gradually building an interpreter for instructions in terms of transitions
@@ -43,3 +71,5 @@ between IAM's states. We continue with the description of an embedded assembly
 language that enables us to build IAM programs reusing the Haskell's notation.
 The last subsection presents the examples of usage of the developed simulation
 and formal verification framework.
+
+\clearpage

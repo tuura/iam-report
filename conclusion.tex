@@ -1,0 +1,12 @@
+\section{Conclusion and future work}
+
+We developed a Haskell model of an Inglorious Adding Machine, a simulation and formal verification framework. We verified a property of a simple yet not trivial program with a loop.
+
+The simulator is working correctly, however it is very basic. If a considered program has an error to be
+debugged, it is more interesting to observe one of the intermediate states rather than final one.
+Thus, a turn-based debugger is needed to be implemented.
+
+The verification part of the developed framework still requires a lot of work. Currently it allow to verify
+only basic properties of IAM programs.
+
+The Haskell programming language has an advanced type system and extensible syntax, being a marvelous tool for EDSL construction. It provides means to write correct, concise and fast programs. However, it does not yet provide the full power of dependent types to encode properties of programs in the type level and get them statically checked by the compiler. An interesting research question is combining the automated theorem provers, such as SAT/SMT solvers, which provide the verification of the EDSL semantics with the strength of dependently-typed programming language to build the EDSL itself. That would shorten the possibilities of making error in the EDSL implementation and reduce the trusted code base.

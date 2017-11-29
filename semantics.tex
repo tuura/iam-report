@@ -1,9 +1,49 @@
 \section{Instruction semantics}
 
-The~\mintinline{haskell}{Instruction} data type represent the syntax of IAM instructions.
+To define the meaning IAM instructions as a state transformer --- a function from
+state space to itself.
+
+\begin{figure}[H]
+\centering
+$T = \{s_1 \rightarrow s_2 : s_1 \in S, s_2 \in S\}$
+\label{}
+\caption{A set of all machine state transformers.}
+\end{figure}
+
+Every instruction transforms the machine state in its own
+way, thus we may define the instructions semantics as a mapping from instructions
+to state transformers.
+
+\begin{figure}[H]
+\centering
+$ \textrm{execute}:I \rightarrow T$
+\label{}
+\caption{Instruction interpreter.}
+\end{figure}
+
+Here $I$ is a finite set represented in Haskell as
+the~\mintinline{haskell}{Instruction} data type.
+
+The state transitions representation are the core concept of the developed
+Haskell framework. Haskell' concept of~\emph{state monad} provides a way to
+emulate a mutable state behaviour in a purely functional programming language
+without explicit state threading. Consider the~\mintinline{haskell}{Machine} type being
+essentially a parametrised state-transition builder:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+newtype Machine a = Machine { runMachine :: State MachineState a }
+    deriving (Functor, Applicative, Monad, MonadState MachineState)
+\end{minted}
+\caption{The IAM state transformer.}
+\end{figure}
+
+Every function with its return type market as~\mintinline{haskell}{Machine a} is a computation
+yielding a value of type~\mintinline{haskell}{a} and possibly altering the state of the machine.
+
 We assign them the semantics by implementing an interpreter
-function~\mintinline{haskell}{execute} that performs pattern-matching on data every
-constructor of the~\mintinline{haskell}{Instruction} and builds a computation in the
+function~\mintinline{haskell}{execute} that considers every data constructor of
+the~\mintinline{haskell}{Instruction} type and builds a computation in the
 ~\mintinline{haskell}{Machine} monad --- a transformer of IAM state. This function
 is the heart of the simulation and formal verification framework.
 
@@ -23,7 +63,7 @@ execute (JumpZero simm       ) = executeJumpZero simm
 \label{execute}
 \end{figure}
 
-Let us now consider the semantics of some of the instructions.
+Let us now consider the semantics of some of instructions.
 
 The simplest thing is halting. If the interpreter sees the halt instruction, it
 sets the~\mintinline{haskell}{Halted} flag preventing the following execution.

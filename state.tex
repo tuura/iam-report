@@ -1,0 +1,42 @@
+\section{The state of the IAM machine}
+
+The state space of the whole IAM machine is essentially a Cartesian product of states spaces
+of every component.
+
+\begin{figure}[H]
+\centering
+$S = \{(rs, ic, i, f, m, p) : r \in RB, ic \in IA, i \in I, f \in F, m \in M, p \in P, c \in C\}$
+\label{stateSpace}
+\caption{The IAM state space.}
+\end{figure}
+
+Here, $RB$ is the set of all possible register bank configurations; $IA$ -- all possible values
+of the instruction addresses, being a set $\{0,\ldots,255\}$ in the current implementation;
+$I$ are possible instruction register configurations (see the~\mintinline{haskell}{Instruction} data type definition~\ref{Instruction}); $F$ --- the states of the flag register, isomorphic to a set
+$\{0,1\} \times \{0,1\}$; $M$ --- the state space of memory; $P$ --- all possible programs; C --- the clock values.
+
+We model this Cartesian product as a Haskell record data type:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+data MachineState = MachineState
+    { registers           :: RegisterBank
+    , instructionCounter  :: InstructionAddress
+    , instructionRegister :: Instruction
+    , flags               :: Flags
+    , memory              :: Memory
+    , program             :: Program
+    , clock               :: Clock
+    }
+\end{minted}
+\label{state}
+\caption{The IAM state data type.}
+\end{figure}
+
+Most of the entities are represented as symbolic words of the appropriate
+length (\mintinline{haskell}{InstructionAddress},~\mintinline{haskell}{Clock}) and
+symbolic functional arrays, i.e. mapping from symbolic keys to symbolic
+values (\mintinline{haskell}{RegisterBank}, \mintinline{haskell}{Memory}, \mintinline{haskell}{Flags}).
+~\mintinline{haskell}{Instruction} and~\mintinline{haskell}{Flag} are custom sum types.
+The~\mintinline{haskell}{Program} data type is essentially a mapping from instruction addresses to
+instructions, a wider account on how it is constructed is given in the next section.
