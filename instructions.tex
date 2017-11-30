@@ -7,9 +7,9 @@ and the informal description of behaviors:
 \begin{longtable}{l|p{8.5cm}}
 \texttt{load r memaddr}     & loads a value from a memory location to a register.\\
 \texttt{loadmi r memaddr}   & loads a value from the memory location to the register using
-an indirect memory access mode\footnote{loading the value from and using it as
+an indirect memory access mode\footnote{loading the value from a memory location and using it as
 a memory address argument for the~\texttt{load} instruction.}.\\
-\texttt{set      r byte   } & loads a 8-bit immediate argument to a register.\\
+\texttt{set      r byte   } & loads an 8-bit immediate argument to a register.\\
 \texttt{store    r memaddr} & stores a value from a register to a memory location.\\
 \texttt{add      r memaddr} & adds a value placed in a memory location to a value contained in a register.\\
 \texttt{jump     byte     } &  performs an unconditional jump. Modifies the machine
@@ -31,8 +31,8 @@ data Instruction = Load     Register MemoryAddress
                  | JumpZero Byte
                  | Halt
 \end{minted}
-\label{Instruction}
 \caption{Haskell data type representing IAM instructions}
+\label{Instruction}
 \end{figure}
 
 Let us clarify the other data types involved. The current implementation of the formal verification

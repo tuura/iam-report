@@ -1,16 +1,16 @@
-\section{The state of the IAM machine}
+\section{The state of IAM machine}
 
 The state space of the whole IAM machine is essentially a Cartesian product of states spaces
 of every component.
 
 \begin{figure}[H]
 \centering
-$S = \{(rs, ic, i, f, m, p) : r \in RB, ic \in IA, i \in I, f \in F, m \in M, p \in P, c \in C\}$
-\label{stateSpace}
+$S = \{(rs, ic, i, f, m, p, c) : r \in R, ic \in A, i \in I, f \in F, m \in M, p \in P, c \in C\}$
 \caption{The IAM state space.}
+\label{stateSpace}
 \end{figure}
 
-Here, $RB$ is the set of all possible register bank configurations; $IA$ -- all possible values
+Here, $R$ is the set of all possible register bank configurations; $A$ -- all possible values
 of the instruction addresses, being a set $\{0,\ldots,255\}$ in the current implementation;
 $I$ are possible instruction register configurations (see the~\mintinline{haskell}{Instruction} data type definition~\ref{Instruction}); $F$ --- the states of the flag register, isomorphic to a set
 $\{0,1\} \times \{0,1\}$; $M$ --- the state space of memory; $P$ --- all possible programs; C --- the clock values.
@@ -29,8 +29,8 @@ data MachineState = MachineState
     , clock               :: Clock
     }
 \end{minted}
-\label{state}
 \caption{The IAM state data type.}
+\label{state}
 \end{figure}
 
 Most of the entities are represented as symbolic words of the appropriate

@@ -35,9 +35,9 @@ sumArray = do
 \label{syntaxExample}
 \end{figure}
 
-This program sums an sequence of numbers located in the memory. We will use this program as
+This program sums a sequence of numbers located in the memory. We will use it as
 our running example through the rest of the report, simulating the execution of the program
-and verifying its correctness. Note that the EDSL's syntax looks exactly like the ones of most
+and verifying its correctness. Note that the EDSL's syntactically looks exactly like most
 assembly languages, but it still is a valid Haskell program. The only
 divergence is the label declaration syntax. Let us now see how we can implement
 all this with the help of Haskell's native support for monads.
@@ -65,7 +65,7 @@ type Script = Writer ()
 \end{figure}
 
 The~\mintinline{haskell}{Writer} monad is designed to be a computation not only
-producing a value, but also accumulation a some kind of a log during the execution.
+producing a value, but also accumulation a some kind of log during the execution.
 In our case, the computation, being a syntactic program constructor, is not supposed
 to produce any kind of return values. The feature we really exploit is the logging one,
 i.e. each step of the monadic computation will extend the accumulating log with a
@@ -86,7 +86,7 @@ We have almost implemented all the facilities to write the program~\ref{syntaxEx
 The only things left are the convenience combinators for embedding of every instruction
 and labels jumps.
 
-Let us start with the instructions embeddings. As an example, consider the
+Let us start with the instructions embedding. As an example, consider the
 embedding of~\mintinline{haskell}{halt} and~\mintinline{haskell}{load} instructions:
 
 \begin{figure}[H]
@@ -165,7 +165,7 @@ assemble s = zip [0..] prg
 \end{figure}
 
 We extract the list of instructions from the~\mintinline{haskell}{Writer} computation
-and pair each instruction with an instruction code. As an usage instance, consider the
+and pair each instruction with an instruction code. As a usage instance, consider the
 translation of the previously considered summation program:
 
 \begin{figure}[H]
@@ -185,7 +185,7 @@ translation of the previously considered summation program:
 \caption{The compiled program.}
 \end{figure}
 
-Again, note that the labels implementation is purely syntactical and the resulting
+Again, note that the labels' implementation is purely syntactical and the resulting
 program contains explicit offset jumps.
 
 \subsection{Conclusion}

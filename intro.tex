@@ -6,7 +6,7 @@ adapting to short term and long term changes,
 with required lifetimes in the order of decades,
 and one"/minute downtime failure of banking software may lead to significant expenses.
 Safety and solidity of software may be achieved through testing and post"/design quality
-assurance, but there is always a possibility to leave some branches of an operations
+assurance, but there is always a possibility to leave some branches of an operation
 scenario untested, leading to a potential disaster.
 
 In contrast with post"/design testing, that does not provide full
@@ -14,12 +14,12 @@ correctness guarantees, formal methods yield a systematic approach for developin
 complex systems in a correct"/by"/construction manner. One reason of advancement of
 formal methods in comparison to testing is a maximal possible elimination of human errors.
 For instance, automated theorem provers perform exhaustive search
-through entire space of possible states of the system and~\emph{formally prove} its
+through the entire space of possible states of the system and~\emph{formally prove} its
 operation to be correct in every single case, completely excluding any possibility of
-non"/specified execution(presuming the correctness of a specification).
+non"/specified execution (presuming the correctness of a specification).
 
 Formal verification is performed by means of a verification tool,
-a~\emph{verification metalanguage} that is used to formalise the model of the system.
+a~\emph{verification metalanguage} that is used to formalize the model of the system.
 However, the development of formal verification tools is by itself a hard problem.
 There is little to no escape from the barber paradox here, therefore most formal
 verification tools have a~\emph{trusted core} --- a part of the implementation that
@@ -41,7 +41,7 @@ yield interesting programs with non-trivial properties to be verified.
 The IAM ISA design was inspired by an extreme case of OISCs~--- one instruction
 set computers. OISCs have ISAs consisting from one instruction only and are
 beautiful in their simplicity. But the verification tool implemented for such a
-simple case would be too degenerate; thus we enriched the architecture with a
+simple case would be too degenerated; thus we enriched the architecture with a
 limited set of additional instructions.
 
 In this report we present the IAM instruction set architecture and a Haskell
@@ -63,7 +63,7 @@ The IAM ISA has 4 general purpose registers, 2 flags and 8 commands. It
 operates 64-bit words as data values and uses 8-bit words as memory addresses.
 Some instructions expect an 8-bit signed immediate argument.
 
-This report is structured as following: we first consider how the instructions
+This report is structured as following: we first consider how the instructions'
 syntax are represented, informally describe the intuitive meaning of each
 instruction; then we transfer to the model of machine state and execution,
 gradually building an interpreter for instructions in terms of transitions
