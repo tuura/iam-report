@@ -1,4 +1,5 @@
 \section{The state of IAM machine}
+\label{sec:State}
 
 The state space of the whole IAM machine is essentially a Cartesian product of states spaces
 of every component.
@@ -39,8 +40,8 @@ Most of the entities are represented as symbolic words of the appropriate
 length (\mintinline{haskell}{InstructionAddress},~\mintinline{haskell}{Clock}) and
 symbolic functional arrays, i.e. mapping from symbolic keys to symbolic
 values (\mintinline{haskell}{RegisterBank}, \mintinline{haskell}{Memory}, \mintinline{haskell}{Flags}).
-~\mintinline{haskell}{Instruction} and~\mintinline{haskell}{Flag} are custom data types.
-\textbf{TODO:} Give the definition of \mintinline{haskell}{Flag}, add references to both
-definitions ("as defined in...").
+~\mintinline{haskell}{Instruction} and~\mintinline{haskell}{Flag} are custom data types,
+as difined on figures~\ref{Instruction} and~\ref{Flags}.
+
 The~\mintinline{haskell}{Program} data type is a mapping from instruction addresses to
 instructions, a wider account on how it is constructed is given in the next section.

@@ -1,4 +1,5 @@
 \section{Instruction semantics}
+\label{sec:Semantics}
 
 In this section we define the meaning IAM instructions as a \emph{state
 transformer}, i.e. a function from the state space to itself.
@@ -32,8 +33,7 @@ essentially a parametrised state-transition builder:
 
 \begin{figure}[H]
 \begin{minted}{haskell}
-newtype Machine a = Machine { runMachine :: State MachineState a }
-    deriving (Functor, Applicative, Monad, MonadState MachineState)
+newtype Machine a = Machine {runMachine :: State MachineState a}
 \end{minted}
 \caption{The IAM state transformer.}
 \end{figure}
@@ -108,14 +108,36 @@ executeAdd rX dmemaddr = do
 \label{addSemantics}
 \end{figure}
 
-\textbf{TODO:} Show the implementation of \mintinline{haskell}{readRegister}
-and \mintinline{haskell}{readMemory}.
+Here,~\mintinline{haskell}{readRegister} and~\mintinline{haskell}{readMemory}
+are functions dedicated to query the states of register bank and memory.
+They are implemented in terms of SBV's array accessors:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+readRegister :: Register -> Machine Value
+readRegister register = do
+    currentState <- get
+    delay 1
+    pure $ readArray (registers currentState) register
+
+readMemory :: MemoryAddress -> Machine Value
+readMemory address = do
+    currentState <- get
+    delay 2
+    pure $ readArray (memory currentState) address
+\end{minted}
+\caption{Register bank and memory accessors.}
+\label{readRegMem}
+\end{figure}
+
+Both functions retrieve the current state of the machine, advance the clock by
+a predefined amount of cycles, and query the machine state for a desired value.
 
 An interesting note to make here is that in the implementation of these functions
 we are using Haskell as a~\emph{metalanguage}. We are operating the machine as
 a puppet master, using the external meta-notions of addition, comparison and let-binding.
 From the machine's point of view, we have an unlimited memory and act instantly,
-which gives us an unlimited modelling power. Later in this section we'll see how
+which gives us an unlimited modeling power. Later in this section we'll see how
 hard it is to achieve such a power using only IAM's internal entities.
 
 As the most sophisticated example we give here, consider the semantics of the
