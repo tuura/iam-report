@@ -21,8 +21,10 @@ non"/specified execution (presuming the correctness of a specification).
 Formal verification is performed by means of a verification tool,
 a~\emph{verification metalanguage} that is used to formalise the model of the system.
 However, the development of formal verification tools is by itself a hard problem.
-There is little to no escape from the \emph{barber paradox} here\footnote{\textbf{TODO:}
-give a brief description?}, therefore most formal
+There is little to no escape from the \emph{barber paradox} here\footnote{
+The barber is the "one who shaves all those, and those only, who do not shave themselves."~
+The question is, does the barber shave himself? In the formal verification context, the
+verification framework is the barber.}, therefore most formal
 verification tools have a~\emph{trusted core} --- a part of the implementation that
 is not itself verified. This fact obliges the developers of a verification framework
 to constantly evaluate the correctness of the implementation. Thus, it is vital
@@ -60,13 +62,13 @@ operates on 64-bit words as data values and uses 8-bit words as memory addresses
 Some instructions expect an 8-bit signed immediate argument.
 
 This report is structured as following: we first consider the representation of
-the instruction syntax and informally describe the intuitive meaning of each
-instruction; then we transfer to the model of machine state and execution,
+the instruction syntax (section ~\ref{sec:Instructions}) and informally describe the intuitive meaning of each
+instruction; then we transfer to the model of machine state and execution (section~\ref{sec:State}),
 gradually building an interpreter for instructions in terms of transitions
 between IAM's states. We continue with the description of an embedded assembly
-language that enables us to build IAM programs reusing Haskell's syntax.
-The last section presents examples of usage of the developed simulation
-and formal verification framework. \textbf{TODO:} Add forward references to
-corresponding sections?
+language (section~\ref{sec:Assembly}) that enables us to build IAM programs reusing Haskell's syntax.
+Section~\ref{sec:Semantics} formally defines the meaning of IAM instructions in terms of state transformers.
+The last section (\ref{sec:Verification}) presents examples of usage of the developed simulation
+and formal verification framework.
 
 \clearpage

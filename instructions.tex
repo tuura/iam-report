@@ -1,5 +1,5 @@
 \section{IAM instructions}
-\label{Instructions}
+\label{sec:Instructions}
 
 The instruction set of IAM comprises 8 instructions. Consider the following
 instruction mnemonics and informal descriptions of their behaviour:
@@ -31,8 +31,21 @@ data Instruction = Load     Register MemoryAddress
                  | JumpZero Byte
                  | Halt
 \end{minted}
-\caption{Haskell data type representing IAM instructions}
+\caption{Haskell data type representing IAM instructions.}
 \label{Instruction}
+\end{figure}
+
+The~\mintinline{haskell}{JumpZero} and~\mintinline{haskell}{Halt} instructions'
+operation depend on zero and halting flags values. Consider the definition
+of~\mintinline{haskell}{Flags} data type:
+
+\begin{figure}[H]
+\begin{minted}{haskell}
+data Flag = Zero
+          | Halted
+\end{minted}
+\caption{Haskell data type representing IAM flags.}
+\label{Flags}
 \end{figure}
 
 Let us clarify the other data types involved. The current implementation of the formal verification
