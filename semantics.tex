@@ -68,7 +68,8 @@ Let us now consider the semantics of some of instructions.
 The simplest thing is halting. If the interpreter sees the halt instruction, it
 sets the~\mintinline{haskell}{Halted} flag preventing the following execution.
 The~\mintinline{haskell}{writeFlag} does the actual machine state modification,
-advancing the clock and setting the flag.
+advancing the clock by one tick (using the~\mintinline{haskell}{delay} function)
+and setting the flag.
 
 \begin{figure}[H]
 \begin{minted}{haskell}
