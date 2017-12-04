@@ -39,8 +39,9 @@ This program sums a sequence of numbers located in the memory. We will use it as
 our running example through the rest of the report, simulating the execution of the program
 and verifying its correctness. Note that the EDSL's syntactically looks exactly like most
 assembly languages, but it still is a valid Haskell program. The only
-divergence is the label declaration syntax. Let us now see how we can implement
-all this with the help of Haskell's native support for monads.
+divergence is the label declaration syntax \mintinline{haskell}{loop <- label}.
+Let us now see how we can implement all this with the help of Haskell's native
+support for monads.
 
 \subsection{Using~\mintinline{haskell}{Writer} to write assembly}
 
@@ -69,8 +70,8 @@ producing a value, but also accumulation a some kind of log during the execution
 In our case, the computation, being a syntactic program constructor, is not supposed
 to produce any kind of return values. The feature we really exploit is the logging one,
 i.e. each step of the monadic computation will extend the accumulating log with a
-value of type~\mintinline{haskell}{Instruction}. At the end of the day, the log will
-contain the list of instructions.
+value of type~\mintinline{haskell}{Instruction}. At the end of the computation,
+the log will contain the list of instructions.
 
 We provide a convenient combinator~\mintinline{haskell}{write}, taking an instruction
 and appending it to a~\mintinline{haskell}{Script}.
@@ -83,8 +84,8 @@ write i = Writer (\p -> ((), i:p))
 \end{figure}
 
 We have almost implemented all the facilities to write the program~\ref{syntaxExample}.
-The only things left are the convenience combinators for embedding of every instruction
-and labels jumps.
+One remaining task is to define the convenience combinators for embedding of every
+instruction and labels jumps.
 
 Let us start with the instructions embedding. As an example, consider the
 embedding of~\mintinline{haskell}{halt} and~\mintinline{haskell}{load} instructions:
@@ -101,8 +102,8 @@ load rX dmemaddr = write (Load rX dmemaddr)
 
 That is it, these embedder-functions just call the~\mintinline{haskell}{write}
 combinator to append the corresponding values of the~\mintinline{haskell}{Instruction}
-data type to the~\mintinline{haskell}{Script}. The rest of the instructions may
-be embedded similarly.
+data type to the~\mintinline{haskell}{Script}. The remaining instructions are embedded
+analogously.
 
 \subsection{Jumping to labels}
 
@@ -113,21 +114,21 @@ but introduces an unnecessary mental overhead for the programmer. Fortunately, w
 can extend the assembly language syntax with labels and the~\mintinline{haskell}{goto}
 command on the level of syntax, no semantics modification required.
 
-The key idea is to represent labels as values the position of the instruction in the
-instruction list.
+The key idea is to represent labels as values of the position of the instruction
+in the instruction list.
 
 \begin{figure}[H]
 \begin{minted}{haskell}
 label :: Writer Label
 label = Writer (\p -> (Label (length p), p))
 \end{minted}
-\caption{Labels are the instructions' indices}
+\caption{Labels as indices of instructions}
 \label{label}
 \end{figure}
 
-The~\mintinline{haskell}{goto} command now may be implemented using the unconditional
-jump with an offset calculated as a difference between the current position in the program and
-one associated with label.
+The~\mintinline{haskell}{goto} command can now be implemented using the unconditional
+jump with an offset calculated as a difference between the current position in the
+program and one associated with label.
 
 \begin{figure}[H]
 \begin{minted}{haskell}
@@ -143,9 +144,9 @@ goto (Label there) = do
 
 The syntactic~\mintinline{haskell}{goto} implementation is free: we do not need
 to extend the semantics of the language to add it. However, the current implementation
-has a flaw. There is no label hoisting, i.e. no possibility to go to a label declared later
-in the program. Therefore, it is necessary to use the explicit offset jumps to
-go forward.
+has a limitation. There is no label hoisting, i.e. no possibility to go to a label
+declared later in the program. Therefore, it is necessary to use the explicit offset
+jumps to go forward.
 
 \subsection{Assembling the~\mintinline{haskell}{Program}}
 
@@ -165,8 +166,8 @@ assemble s = zip [0..] prg
 \end{figure}
 
 We extract the list of instructions from the~\mintinline{haskell}{Writer} computation
-and pair each instruction with an instruction code. As a usage instance, consider the
-translation of the previously considered summation program:
+and pair each instruction with an instruction code. For example, the summation
+program shown in Fig.~\ref{syntaxExample} is translated as follows:
 
 \begin{figure}[H]
 \begin{minted}{haskell}
@@ -185,8 +186,8 @@ translation of the previously considered summation program:
 \caption{The compiled program.}
 \end{figure}
 
-Again, note that the labels' implementation is purely syntactical and the resulting
-program contains explicit offset jumps.
+Again, note that the implementation of labels is purely syntactical and the
+resulting program contains explicit offset jumps.
 
 \subsection{Conclusion}
 
@@ -194,7 +195,7 @@ Haskell provides a variety of methods for EDSLs construction.
 We used one of them to build an embedding of IAM assembly language.
 With only a few lines of code we recruited the power of standard Haskell's
 ~\mintinline{haskell}{do}-notation to write programs in our custom language and
-translate it to our custom data type.
+translate them to our custom data type.
 
 In the next subsection, we are going to build a simulation and formal verification
-framework to observe the results of programs' executions and verify their properties.
+framework to observe the results of program executions and verify their properties.

@@ -1,7 +1,7 @@
 \section{Instruction semantics}
 
-To define the meaning IAM instructions as a state transformer --- a function from
-state space to itself.
+In this section we define the meaning IAM instructions as a \emph{state
+transformer}, i.e. a function from the state space to itself.
 
 \begin{figure}[H]
 \centering
@@ -24,8 +24,8 @@ $ \textrm{execute}:I \rightarrow T$
 Here $I$ is a finite set represented in Haskell as
 the~\mintinline{haskell}{Instruction} data type.
 
-The state transitions representation are the core concept of the developed
-Haskell framework. Haskell' concept of~\emph{state monad} provides a way to
+The state transition representation is the core concept of the developed
+Haskell framework. The Haskell's concept of~\emph{state monad} provides a way to
 emulate a mutable state behaviour in a purely functional programming language
 without explicit state threading. Consider the~\mintinline{haskell}{Machine} type being
 essentially a parametrised state-transition builder:
@@ -41,7 +41,7 @@ newtype Machine a = Machine { runMachine :: State MachineState a }
 Every function with its return type market as~\mintinline{haskell}{Machine a} is a computation
 yielding a value of type~\mintinline{haskell}{a} and possibly altering the state of the machine.
 
-We assign them the semantics by implementing an interpreter
+We define the semantics by implementing an interpreter
 function~\mintinline{haskell}{execute} that considers every data constructor of
 the~\mintinline{haskell}{Instruction} type and builds a computation in the
 ~\mintinline{haskell}{Machine} monad --- a transformer of IAM state. This function
@@ -65,7 +65,7 @@ execute (JumpZero simm       ) = executeJumpZero simm
 
 Let us now consider the semantics of some of instructions.
 
-The simplest thing is halting. If the interpreter sees the halt instruction, it
+The simplest state transformation is halting. If the interpreter sees the halt instruction, it
 sets the~\mintinline{haskell}{Halted} flag preventing the following execution.
 The~\mintinline{haskell}{writeFlag} does the actual machine state modification,
 advancing the clock by one tick (using the~\mintinline{haskell}{delay} function)
@@ -88,10 +88,10 @@ writeFlag flag value = do
 \label{haltSemantics}
 \end{figure}
 
-As a more involved example, let us add the semantics to the addition instruction.
+As a more involved example, let us define the semantics of the addition instruction.
 It operates with a register containing a first term and a memory location referring
 to the second one. The~\mintinline{haskell}{executeAdd} essentially retrieves the terms,
-adds them, places the result to the register, and sets the\mintinline{haskell}{Zero}
+adds them, places the result to the register, and sets the \mintinline{haskell}{Zero}
 flag if the result is zero.
 
 \begin{figure}[H]
@@ -108,17 +108,20 @@ executeAdd rX dmemaddr = do
 \label{addSemantics}
 \end{figure}
 
+\textbf{TODO:} Show the implementation of \mintinline{haskell}{readRegister}
+and \mintinline{haskell}{readMemory}.
+
 An interesting note to make here is that in the implementation of these functions
 we are using Haskell as a~\emph{metalanguage}. We are operating the machine as
 a puppet master, using the external meta-notions of addition, comparison and let-binding.
-From the machine's point of view, we have an unlimited memory and act instantly.
-That gives us an unlimited power. Later in this section we'll see how hard it is
-to achieve such a power using only IAM's internal entities.
+From the machine's point of view, we have an unlimited memory and act instantly,
+which gives us an unlimited modelling power. Later in this section we'll see how
+hard it is to achieve such a power using only IAM's internal entities.
 
 As the most sophisticated example we give here, consider the semantics of the
-~\mintinline{haskell}{JumpZero} instruction.It uses SBV's symbolic conditional
+\mintinline{haskell}{JumpZero} instruction. It uses SBV's symbolic conditional
 operation~\mintinline{haskell}{ite} to test if the~\mintinline{haskell}{Zero} flag
-is set, and, if so, modifies the machine's instruction counter by a provide offset.
+is set, and, if so, modifies the machine's instruction counter by a provided offset.
 
 \begin{figure}[H]
 \begin{minted}{haskell}

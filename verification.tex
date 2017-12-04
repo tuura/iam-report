@@ -1,14 +1,14 @@
 \section{Simulating and formally verifying programs}
 
 We have developed the types representing the IAM machine and built the facilities
-to construct the programs. Now we will assign the semantics to every instruction
+to construct IAM programs. Now we will assign the semantics to every instruction
 of the IAM instruction set in terms of how they alter the state of the machine.
 That will enable us to simulate the execution of programs and verify their properties
 by means of symbolic computation using the Haskell SBV library~\cite{SBV}.
-Note that SBV's design allow us to reuse the same Haskell implementation for
+Note that SBV's design allows us to reuse the same Haskell implementation for
 both simulation and verification parts of the framework. We achieve this unified
-implementation by using symbolic execution with~\emph{literal} (e.g. concrete) values
-to simulate the programs execution.
+implementation by using symbolic execution with~\emph{literal} (e.g. non-symbolic)
+values to simulate programs.
 
 In this section, we will continue to use the example of array summation.
 
@@ -43,9 +43,9 @@ The program execution simulator currently provides only a limited functionality
 of supplying an initial state of the machine, executing the program up to a
 desired amount of state transitions, and observing the final state.
 
-To construct an initial state, the user need to supply an assembly program and
+To construct an initial state, the user needs to supply an assembly program and
 a memory layout. Then the~\mintinline{haskell}{runModel} needs to be called
-with a maximum number a steps parameter and an initial state.
+with two parameters: a maximum number a steps and an initial state.
 
 \begin{figure}[H]
 \begin{minted}{haskell}
@@ -59,33 +59,34 @@ let mem = initialiseMemory
 Since the memory contains only concrete values, the~\mintinline{haskell}{runModel}
 function performs the simulation~--- a sequence of state transitions. To retrieve
 the values we are interested in, we need to access the part of the specific components
-of the final state. in this case, the program would run for 93 clock cycles, yielding
+of the final state. In this case, the program runs for 93 clock cycles, yielding
 the result --- a number 6 --- in the register~\mintinline{haskell}{r0}.
 
-The program simulator needs further development. The shortest goal is to build an
-interactive turn-based simulator displacing the current state of the machine on every step.
+The program simulator needs further development. The next goal is to build an
+interactive turn-based simulator displacing the current state of the machine
+on every step.
 
 \subsection{Program verification}
 
 At this point, we have an assembly language to write programs for IAM machine
-and a model of machines execution. One of the main objectives of the whole
+and a model of machine execution. One of the main objectives of the whole
 developments is to be able to use a SAT/SMT solver to formally verify properties
-of IAM programs. Using SBV framework, we can formulate theorems about IAM programs,
-which then get translated into SMT-LIB input/output language~\cite{smtlib} for SMT solvers and
-automatically checked for satisfiability.
+of IAM programs. Using the SBV framework, we can formulate theorems about IAM programs,
+which then get translated into SMT-LIB input/output language~\cite{smtlib} for
+SMT solvers and are automatically checked for satisfiability.
 
-As an example, we would like to prove a property of the earlier considered
-summation program~\ref{arraySum}: given a fixed sequence of any numbers located in memory,
-the program indeed calculates their sum. Note, that we do not track integer overflow.
+As an example, we would like to prove the following theorem of the earlier considered
+summation program (Fig.~\ref{arraySum}): given a fixed sequence of any numbers located in memory,
+the program indeed calculates their sum. Note that we do not track integer overflow.
 
-We define the theorem to prove as a Haskell function parametrised by a length of a sequence.
+We define the theorem as a Haskell function parametrised by the length of a sequence.
 Obviously, the proposition does not make sense for all integer numbers, but that is not our
 consideration at this point, because currently we do not quantify on the length of the
 sequence.
 
 \begin{minted}{haskell}
 theoremSumArray :: Int -> SBool
-theoremSumArray = do ...
+theoremSumArray n = do ...
 \end{minted}
 
 Now, inside the theorem environment, we universally quantify on a
@@ -137,4 +138,4 @@ the~\emph{symbolic termination} problem. In our case, this problem should be sol
 because the memory is finite, thus the program will terminate in a finite number of
 steps and the termination would be determined by an external non-symbolic step counter.
 But, unfortunately, the current state of implementation does not allow to check such a
-property. This is a shortcoming goal to enable it to check theorems of the described kind.
+property. Support for theorems of the described kind is the subject of ongoing work.

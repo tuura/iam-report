@@ -1,21 +1,21 @@
 \section{IAM instructions}
 \label{Instructions}
 
-The instruction set comprises 8 instructions. Consider the instruction mnemonics
-and the informal description of behaviors:
+The instruction set of IAM comprises 8 instructions. Consider the following
+instruction mnemonics and informal descriptions of their behaviour:
 
-\begin{longtable}{l|p{8.5cm}}
-\texttt{load r memaddr}     & loads a value from a memory location to a register.\\
-\texttt{loadmi r memaddr}   & loads a value from the memory location to the register using
-an indirect memory access mode\footnote{loading the value from a memory location and using it as
+\begin{longtable}{l|p{9cm}}
+\texttt{load r memaddr}     & Load a value from a memory location to a register.\\
+\texttt{loadmi r memaddr}   & Load a value from the memory location to the register using
+an indirect memory access mode\footnote{Loading the value from a memory location and using it as
 a memory address argument for the~\texttt{load} instruction.}.\\
-\texttt{set      r byte   } & loads an 8-bit immediate argument to a register.\\
-\texttt{store    r memaddr} & stores a value from a register to a memory location.\\
-\texttt{add      r memaddr} & adds a value placed in a memory location to a value contained in a register.\\
-\texttt{jump     byte     } &  performs an unconditional jump. Modifies the machine
+\texttt{set      r byte   } & Load an 8-bit immediate argument to a register.\\
+\texttt{store    r memaddr} & Store a value from a register to a memory location.\\
+\texttt{add      r memaddr} & Add a value placed in a memory location to a value contained in a register.\\
+\texttt{jump     byte     } & Perform an unconditional jump modifying the machine
 instruction counter by a given offset.\\
-\texttt{jumpz    byte     } & performs a conditional jump if the zero flag is set.\\
-\texttt{halt              } & stops the execution. Sets the halt flag.
+\texttt{jumpz    byte     } & Performs a conditional jump if the zero flag is set.\\
+\texttt{halt              } & Stop the execution setting the halt flag.
 \end{longtable}
 
 We encode the instructions in Haskell using the following data type:
@@ -37,11 +37,11 @@ data Instruction = Load     Register MemoryAddress
 
 Let us clarify the other data types involved. The current implementation of the formal verification
 framework is build on top of Haskell SBV (SMT Based Verification)
-library~\cite{SBV}. SBV performs symbolic execution of the IAM programs,
-provides a DSL for defining properties to be automatically checked by a SAT/SMT solver.
+library~\cite{SBV}. SBV provides a DSL for defining properties to be automatically
+checked by a SAT/SMT solver, and allows us to symbolically execute IAM programs.
 The~\mintinline{haskell}{Register},~\mintinline{haskell}{MemoryAddress}
-and~\mintinline{haskell}{Byte} types are internally represented as the symbolic
-words of appropriate length.
+and~\mintinline{haskell}{Byte} types are internally represented as symbolic
+SBV words of appropriate length.
 
 Later in this report we will implement an interpreter for the IAM assembly language,
 thus defining an operational semantics for the syntax provided.

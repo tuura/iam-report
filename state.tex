@@ -11,9 +11,11 @@ $S = \{(rs, ic, i, f, m, p, c) : r \in R, ic \in A, i \in I, f \in F, m \in M, p
 \end{figure}
 
 Here, $R$ is the set of all possible register bank configurations; $A$ -- all possible values
-of the instruction addresses, being a set $\{0,\ldots,255\}$ in the current implementation;
-$I$ are possible instruction register configurations (see the~\mintinline{haskell}{Instruction} data type definition~\ref{Instruction}); $F$ --- the states of the flag register, isomorphic to a set
-$\{0,1\} \times \{0,1\}$; $M$ --- the state space of memory; $P$ --- all possible programs; C --- the clock values.
+of the instruction addresses, i.e. the set $\{0,\ldots,255\}$ in the current implementation;
+$I$ are possible instruction register configurations (see the~\mintinline{haskell}{Instruction}
+data type definition~\ref{Instruction}); $F$ --- the states of the flag register, isomorphic to the set
+$\{0,1\} \times \{0,1\}$; $M$ --- the state space of memory; $P$ --- all possible programs;
+C --- the clock values.
 
 We model this Cartesian product as a Haskell record data type:
 
@@ -37,6 +39,8 @@ Most of the entities are represented as symbolic words of the appropriate
 length (\mintinline{haskell}{InstructionAddress},~\mintinline{haskell}{Clock}) and
 symbolic functional arrays, i.e. mapping from symbolic keys to symbolic
 values (\mintinline{haskell}{RegisterBank}, \mintinline{haskell}{Memory}, \mintinline{haskell}{Flags}).
-~\mintinline{haskell}{Instruction} and~\mintinline{haskell}{Flag} are custom sum types.
-The~\mintinline{haskell}{Program} data type is essentially a mapping from instruction addresses to
+~\mintinline{haskell}{Instruction} and~\mintinline{haskell}{Flag} are custom data types.
+\textbf{TODO:} Give the definition of \mintinline{haskell}{Flag}, add references to both
+definitions ("as defined in...").
+The~\mintinline{haskell}{Program} data type is a mapping from instruction addresses to
 instructions, a wider account on how it is constructed is given in the next section.

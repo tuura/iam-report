@@ -3,25 +3,26 @@
 Software and hardware systems are required to be reliable.
 For example, space satellites must be able to operate autonomously in space,
 adapting to short term and long term changes,
-with required lifetimes in the order of decades,
-and one"/minute downtime failure of banking software may lead to significant expenses.
-Safety and solidity of software may be achieved through testing and post"/design quality
+with required lifetimes in the order of decades, whereas
+one"/minute downtime failure of banking software may lead to significant expenses.
+Software reliability may be achieved through testing and post"/design quality
 assurance, but there is always a possibility to leave some branches of an operation
 scenario untested, leading to a potential disaster~\cite{Leveson2004}.
 
-In contrast with post"/design testing, that does not provide full
-correctness guarantees, formal methods yield a systematic approach for developing
-complex systems in a correct"/by"/construction manner. One reason of advancement of
-formal methods in comparison to testing is a maximal possible elimination of human errors.
-For instance, automated theorem provers perform exhaustive search
+In contrast with post"/design testing, which does not provide the full
+correctness guarantee, formal methods yield a systematic approach for developing
+complex systems in a correct"/by"/construction manner. One reason for advancement
+of formal methods in comparison to testing is a maximal possible elimination of
+human errors. For instance, automated theorem provers perform exhaustive search
 through the entire space of possible states of the system and~\emph{formally prove} its
 operation to be correct in every single case, completely excluding any possibility of
 non"/specified execution (presuming the correctness of a specification).
 
 Formal verification is performed by means of a verification tool,
-a~\emph{verification metalanguage} that is used to formalize the model of the system.
+a~\emph{verification metalanguage} that is used to formalise the model of the system.
 However, the development of formal verification tools is by itself a hard problem.
-There is little to no escape from the barber paradox here, therefore most formal
+There is little to no escape from the \emph{barber paradox} here\footnote{\textbf{TODO:}
+give a brief description?}, therefore most formal
 verification tools have a~\emph{trusted core} --- a part of the implementation that
 is not itself verified. This fact obliges the developers of a verification framework
 to constantly evaluate the correctness of the implementation. Thus, it is vital
@@ -29,47 +30,43 @@ to keep the trusted core implementation clear and as concise as possible. This r
 is dedicated to a case study of development of a simulation and formal verification
 framework in the domain of computer architecture.
 
-The IAM instruction set architecture is designed to be a case study for
-the simulation and formal verification tools development. Thus, the ISA design
-is mainly driven by the dichotomy between tool's expressiveness and their
-implementation conciseness.
-We want the tools' implementations to be reasonable concise in order to keep
-focus on the implementation details and escape the mental overhead of maintaining a large
-code base. At the same time, the case study ISA must be sophisticated enough to
-yield interesting programs with non-trivial properties to be verified.
+The IAM\footnote{The acronym IAM stands for Inglorious Adding Machine.} instruction
+set architecture is designed to be a case study for the development of simulation
+and formal verification tools. Thus, the design of the Instruction Set
+Architecture~(ISA) of IAM is mainly driven by the dichotomy between the tool
+expressiveness and the implementation conciseness.
+We want the tool implementation to be reasonably concise in order to keep the
+focus on the implementation details and escape the mental overhead of maintaining
+a large code base. At the same time, the case study must be sophisticated enough
+to yield interesting programs with non-trivial properties to be verified.
 
-The IAM ISA design was inspired by an extreme case of OISCs~--- one instruction
-set computers. OISCs have ISAs consisting from one instruction only and are
+The IAM design was inspired by an extreme case of one instruction
+set computers (OISCs). OISCs have ISAs consisting from one instruction only and are
 beautiful in their simplicity. But the verification tool implemented for such a
 simple case would be too degenerated; thus we enriched the architecture with a
 limited set of additional instructions.
 
-In this report we present the IAM instruction set architecture and a Haskell
-framework for simulation, formal verification and synthesis of IAM programs.
-The framework includes an embedded assembly language and a framework to
-simulate the machine operation and verify properties of the IAM programs. As
+In this report we present the IAM architecture and a Haskell framework for
+simulation, formal verification and synthesis of IAM programs.
+The framework includes an embedded assembly language and support for
+simulating the machine operation and verifying properties of the IAM programs. As
 IAM architecture design is mainly driven by our Haskell implementation, we
 present all the involved concepts using their Haskell encoding. We believe that
 Haskell notation is clear enough and the chosen manner of presentation will
 enable us to focus on the formal verification framework implementation.
 
-IAM is designed to be simple but yet not trivial computer architecture. Since
-its main purpose is to be a case study for simulation and verification tools
-design, IAM's design is mainly driven by the dichotomy between tool's
-expressiveness and conciseness. We aim to explore the methods of development of
-formal verification tools thus we need a simple yet not trivial case study.
-
-The IAM ISA has 4 general purpose registers, 2 flags and 8 commands. It
-operates 64-bit words as data values and uses 8-bit words as memory addresses.
+IAM has 4 general purpose registers, 2 flags and 8 instructions. It
+operates on 64-bit words as data values and uses 8-bit words as memory addresses.
 Some instructions expect an 8-bit signed immediate argument.
 
-This report is structured as following: we first consider how the instructions'
-syntax are represented, informally describe the intuitive meaning of each
+This report is structured as following: we first consider the representation of
+the instruction syntax and informally describe the intuitive meaning of each
 instruction; then we transfer to the model of machine state and execution,
 gradually building an interpreter for instructions in terms of transitions
 between IAM's states. We continue with the description of an embedded assembly
-language that enables us to build IAM programs reusing the Haskell's notation.
-The last subsection presents the examples of usage of the developed simulation
-and formal verification framework.
+language that enables us to build IAM programs reusing Haskell's syntax.
+The last section presents examples of usage of the developed simulation
+and formal verification framework. \textbf{TODO:} Add forward references to
+corresponding sections?
 
 \clearpage
